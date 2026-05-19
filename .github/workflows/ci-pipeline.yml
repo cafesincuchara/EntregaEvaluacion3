@@ -1,11 +1,47 @@
-name: Staff Quick Test
+name: CI Pipeline
+
 on:
   push:
-    branches: [ "develop", "main" ] #se tenia que agregar la rama main para que pueda funcionar el pipeline
+    branches: [ "develop", "main" ]
 
 jobs:
-  test-echo:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Saludo Staff
-        run: echo "Pipeline funcionando"
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      - name: Run unit tests
+        run: ./mvnw clean test
+
+  sonar:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      - name: SonarCloud analysis
+        run: ./mvnw verify sonar:sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker:
+    needs: sonar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Docker image
+        run: docker build -t productosapi:${{ github.sha }} .

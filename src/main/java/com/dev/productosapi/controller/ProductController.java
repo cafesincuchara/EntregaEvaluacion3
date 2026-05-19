@@ -16,7 +16,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProductController {
 
-    //inyectamos el service en el controller para usar metodos
     private final ProductService service;
 
     @GetMapping
