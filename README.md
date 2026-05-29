@@ -122,3 +122,5 @@ reglas que definimos, y la escabilidad, que en pocas palabras gracias al compose
 como manejar esos recursos sin asfixiarse por la reparticion del trafico en el compose
 
 **Vicente Herrera**
+La IA siempre servira para poder ayudar en los trabajos que nos toma tiempo organizar y llevar acabo, 
+es nuestro deber como estudiantes el saber como usarla para aprender mas de lo sabemos.
