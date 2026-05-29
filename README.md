@@ -123,4 +123,7 @@ como manejar esos recursos sin asfixiarse por la reparticion del trafico en el c
 
 **Vicente Herrera**
 La IA siempre servira para poder ayudar en los trabajos que nos toma tiempo organizar y llevar acabo, 
-es nuestro deber como estudiantes el saber como usarla para aprender mas de lo sabemos.
+es nuestro deber como estudiantes el saber como usarla para aprender mas de lo sabemos. Durante el proyecto 
+aprendi de mejor manera el uso de API keys y su gran manejo para poder usar paginas como sonar, render etc. 
+Tener tantos servicios puede ser cansador pero con GitHub Action siempre se mejora la productividad de los jobs que puede repetir y 
+lanzar.
