@@ -16,10 +16,12 @@ Límites de recursos: Le asignamos un máximo de 0.50 CPUs y 512MB de memoria RA
 esto es para evitar que la aplicación consuma todos los recursos y bote el servidor.
 
 ## Trazabilidad y Calidad
+Vicente Herrera
 Para asegurar que nunca llegue código con errores a producción, configuramos el pipeline para que sea estrictamente secuencial,
 esto lo logramos usando el parámetro needs en GitHub Actions. El paso de "Deploy" depende obligatoriamente de que el paso 
 de "Docker" haya terminado bien, el cual a su vez depende de "Sonar" y "Test". Si una prueba unitaria falla o 
 Sonar detecta un problema de seguridad grave, el proceso se corta inmediatamente y no se despliega nada.
+
 ## Declaración de uso de IA
 Durante el trabajo, utilizamos Gemini como apoyo técnico para:
 Entender cómo escribir correctamente la sintaxis de los límites de memoria y CPU en el archivo docker-compose.yml.
@@ -27,6 +29,7 @@ Entender cómo conectar los jobs en GitHub Actions para asegurar la trazabilidad
 
 ## Reflexiones Individuales
 Brayan Gonzalez
+
 yo he comprendido q el funcionamiento de la orquestacion basicamente
 seria el manual de instrucciones para el servidor al cual subimos nuestro proyecto, 
 en el fondo seria como queremos q el lo ejecute y el despliegue vendria siendo la orden final
