@@ -1,6 +1,9 @@
-target/
-.git/
-.idea/
-*.md
+.env
+.git
 .gitignore
-.gitattributes
+.github
+.vscode
+.idea
+*.md
+node_modules
+target/

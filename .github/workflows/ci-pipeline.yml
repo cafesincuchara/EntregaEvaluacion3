@@ -1,11 +1,16 @@
-name: CI Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
     branches: [ "develop", "main" ]
 
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: productosapi
+  ECR_REGISTRY: 905418035297.dkr.ecr.us-east-1.amazonaws.com
+
 jobs:
-  test:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,13 +20,15 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-      - name: Make mvnw executable
-        run: chmod +x ./mvnw
-      - name: Run unit tests
-        run: ./mvnw clean test
+      - name: Run tests with coverage
+        run: mvn clean verify jacoco:report
+      - name: Check coverage (min 80%)
+        run: mvn jacoco:check
+      - name: Checkstyle & PMD
+        run: mvn checkstyle:check pmd:check
 
   sonar:
-    needs: test
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,35 +38,67 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-      - name: Make mvnw executable
-        run: chmod +x ./mvnw
       - name: SonarCloud analysis
-        run: ./mvnw verify sonar:sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }} -Dsonar.projectKey=productosapi -Dsonar.branch.name=main
+        run: mvn verify sonar:sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }} -Dsonar.projectKey=productosapi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  docker:
+  build-and-push:
     needs: sonar
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Build Docker image
-        run: docker build -t productosapi:${{ github.sha }} .
-  # ... (Aquí arriba estará el código de tu compañero para pruebas y seguridad) ...
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push Docker image
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
   deploy:
-    name: Despliegue en Render
-    needs: docker
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-
     steps:
-      - name: Trigger deploy en Render
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
+              docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+            docker pull ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+            docker stop productosapi || true
+            docker rm productosapi || true
+            docker run -d -p 8080:8080 \
+              --name productosapi \
+              --log-driver awslogs \
+              --log-opt awslogs-group=/productosapi/microservice \
+              --log-opt awslogs-region=${{ env.AWS_REGION }} \
+              --log-opt awslogs-stream-prefix=ec2-productosapi \
+              -e SERVER_PORT=8080 \
+              -e AWS_REGION=${{ env.AWS_REGION }} \
+              ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+            docker system prune -f
+      - name: Verify deployment
         run: |
-          curl -X POST https://api.render.com/v1/services/srv-d8cqb428qa3s73bo5q2g/deploys \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{}'
+          sleep 10
+          curl -sf http://${{ secrets.EC2_HOST }}:8080/actuator/health && echo "Health check passed"

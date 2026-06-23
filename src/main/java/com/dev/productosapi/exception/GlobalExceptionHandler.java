@@ -1,5 +1,7 @@
 package com.dev.productosapi.exception;
 
+import io.micrometer.core.instrument.Counter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -10,8 +12,12 @@ import java.time.LocalDateTime;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @Autowired(required = false)
+    private Counter errorCounter;
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> manejarRuntime(RuntimeException ex) {
+        if (errorCounter != null) errorCounter.increment();
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 ex.getMessage(),
@@ -22,6 +28,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> manejarValidacion(MethodArgumentNotValidException ex) {
+        if (errorCounter != null) errorCounter.increment();
         String mensajeError = ex.getBindingResult().getFieldError().getDefaultMessage();
 
         ErrorResponse error = new ErrorResponse(
