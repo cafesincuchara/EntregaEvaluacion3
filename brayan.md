@@ -26,8 +26,8 @@
 | 🔴 Alta | `@XRayEnabled` en `ProductosapiApplication.java` | IE1 | Agregar anotación e import |
 | 🔴 Alta | `.github/workflows/deploy.yml` | IE6 | Crear workflow con 3 jobs (validate → build → deploy) y 7 validaciones |
 | 🔴 Alta | `scripts/audit-pipeline.sh` | IE6 | Crear script de auditoría automatizada |
-| 🟡 Media | 4 alarmas CloudWatch (AWS CLI) | IE1 | CPU > 80%, Memory > 85%, Error spike > 10, UnhealthyHost > 0 |
-| 🟡 Media | Dashboard CloudWatch `ProductosAPI-EP3` | IE3 | 7 widgets: CPU, Memory, Deploy Duration, Coverage, Errors, Requests, Availability |
+| 🟡 Media | 4 alarmas CloudWatch (AWS CLI) | IE1 | CPU > 80% (EC2), Memory > 85% (CWAgent), Error spike > 10, UnhealthyHost > 0 |
+| 🟡 Media | Dashboard CloudWatch `ProductosAPI-EP3` | IE3 | 7 widgets: CPU (EC2), Memory (CWAgent), Deploy Duration, Coverage, Errors, Requests, Availability |
 | 🟡 Media | Branch Protection Rules (Settings GitHub) | IE6 | Configurar reglas para `main` y `develop` |
 | 🟡 Media | Publicar métricas desde el pipeline | IE3 | Steps en deploy.yml: DeploymentDuration y TestCoverage |
 | 🔵 Baja | Auto-refresh en dashboard | IE3 | Activar refresh cada 1 minuto + compartir enlace |
@@ -49,19 +49,20 @@
 - Retention: 30 días
 - Crear también: `/productosapi/ci-cd`
 
-#### 2. Configurar logging en el Task Definition de ECS
+#### 2. Configurar logging en Docker
 
-El microservicio (`ProductosapiApplication`) ya usa Spring Boot con logger por defecto. En la Task Definition de ECS (ver CloudFormation de Vicente) agregar:
+El microservicio (`ProductosapiApplication`) ya usa Spring Boot con logger por defecto. En la instancia EC2, el contenedor se ejecuta con el log driver de awslogs:
 
-```json
-"logConfiguration": {
-  "logDriver": "awslogs",
-  "options": {
-    "awslogs-group": "/productosapi/microservice",
-    "awslogs-region": "us-east-1",
-    "awslogs-stream-prefix": "ecs-productosapi"
-  }
-}
+```bash
+docker run -d -p 8080:8080 \
+  --name productosapi \
+  --log-driver awslogs \
+  --log-opt awslogs-group=/productosapi/microservice \
+  --log-opt awslogs-region=us-east-1 \
+  --log-opt awslogs-stream-prefix=ec2-productosapi \
+  -e SERVER_PORT=8080 \
+  -e AWS_REGION=us-east-1 \
+  905418035297.dkr.ecr.us-east-1.amazonaws.com/productosapi:latest
 ```
 
 Verificar en CloudWatch → Log groups → `/productosapi/microservice` → Log streams que aparecen los logs del microservicio.
@@ -173,9 +174,9 @@ errorCounter.increment();
 Crear 4 alarmas:
 
 | Alarma | Métrica | Condición | Acción |
-|---|---|---|---|
-| `productosapi-cpu-high` | `AWS/ECS → CPUUtilization` | > 80% por 5 min | SNS通知 |
-| `productosapi-memory-high` | `AWS/ECS → MemoryUtilization` | > 85% por 5 min | SNS通知 |
+|---|---|---|---|---|
+| `productosapi-cpu-high` | `AWS/EC2 → CPUUtilization` | > 80% por 5 min | SNS通知 |
+| `productosapi-memory-high` | `CWAgent → mem_used_percent` | > 85% por 5 min | SNS通知 |
 | `productosapi-error-spike` | `ProductosAPI → productosapi.errors.total` | > 10 en 5 min | SNS通知 |
 | `productosapi-unhealthy-host` | `AWS/ApplicationELB → UnhealthyHostCount` | > 0 por 2 min | SNS通知 |
 
@@ -185,13 +186,13 @@ aws cloudwatch put-metric-alarm \
   --alarm-name "productosapi-cpu-high" \
   --alarm-description "Alarma cuando CPU > 80%" \
   --metric-name CPUUtilization \
-  --namespace AWS/ECS \
+  --namespace AWS/EC2 \
   --statistic Average \
   --period 300 \
   --evaluation-periods 1 \
   --threshold 80 \
   --comparison-operator GreaterThanThreshold \
-  --dimensions Name=ClusterName,Value=productosapi-cluster Name=ServiceName,Value=productosapi-service
+  --dimensions Name=InstanceId,Value=<instance-id>
 ```
 
 #### 6. Configurar X-Ray para trazabilidad
@@ -254,14 +255,14 @@ public class ProductosapiApplication {
 #### 2. Widgets del dashboard
 
 | # | Widget | Tipo | Métrica |
-|---|---|---|---|
-| 1 | CPU Usage | Line | `AWS/ECS → CPUUtilization` |
-| 2 | Memory Usage | Line | `AWS/ECS → MemoryUtilization` |
+|---|---|---|---|---|
+| 1 | CPU Usage | Line | `AWS/EC2 → CPUUtilization` |
+| 2 | Memory Usage | Line | `CWAgent → mem_used_percent` |
 | 3 | Deployment Duration | Number | `ProductosAPI → DeploymentDuration` |
 | 4 | Test Coverage | Gauge | `ProductosAPI → TestCoverage` |
 | 5 | Error Rate | Stacked Area | `ProductosAPI → productosapi.errors.total` + `AWS/ApplicationELB → HTTPCode_Target_5XX_Count` |
 | 6 | Request Count | Line | `ProductosAPI → productosapi.requests.total` |
-| 7 | Service Availability | Number | `AWS/ECS → HealthyHostCount` |
+| 7 | Service Availability | Number | `AWS/ApplicationELB → HealthyHostCount` |
 
 #### 3. Publicar métricas desde el pipeline CI/CD
 
@@ -325,8 +326,6 @@ on:
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: productosapi
-  ECS_CLUSTER: productosapi-cluster
-  ECS_SERVICE: productosapi-service
 
 jobs:
   validate:
@@ -452,20 +451,30 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy to Amazon ECS
-        run: |
-          aws ecs update-service \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --service ${{ env.ECS_SERVICE }} \
-            --force-new-deployment \
-            --region ${{ env.AWS_REGION }}
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Wait for stable deployment
-        run: |
-          aws ecs wait services-stable \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --services ${{ env.ECS_SERVICE }} \
-            --region ${{ env.AWS_REGION }}
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            aws ecr get-login-password --region us-east-1 | \
+              docker login --username AWS --password-stdin 905418035297.dkr.ecr.us-east-1.amazonaws.com
+            docker pull 905418035297.dkr.ecr.us-east-1.amazonaws.com/productosapi:latest
+            docker stop productosapi || true
+            docker rm productosapi || true
+            docker run -d -p 8080:8080 \
+              --name productosapi \
+              --log-driver awslogs \
+              --log-opt awslogs-group=/productosapi/microservice \
+              --log-opt awslogs-region=us-east-1 \
+              --log-opt awslogs-stream-prefix=ec2-productosapi \
+              -e SERVER_PORT=8080 \
+              -e AWS_REGION=us-east-1 \
+              905418035297.dkr.ecr.us-east-1.amazonaws.com/productosapi:latest
 
       - name: Publish deployment metrics
         run: |
@@ -604,7 +613,7 @@ Ir a Settings → Branches → Add rule para `main`:
 - [ ] Modificar `ProductController.java`: inyectar e incrementar contadores
 - [ ] Modificar `GlobalExceptionHandler.java`: incrementar errorCounter en catch
 - [ ] Modificar `ProductosapiApplication.java`: agregar `@XRayEnabled`
-- [ ] Log group `/productosapi/microservice` creado y recibiendo logs (CloudFormation lo crea automáticamente)
+- [ ] Log group `/productosapi/microservice` creado y recibiendo logs (desde Docker awslogs driver)
 - [ ] 4 alarmas CloudWatch configuradas (CPU, Memory, ErrorSpike, UnhealthyHost)
 - [ ] Pantallazos: logs (CloudWatch Insights), métricas, alarmas OK, X-Ray service map
 
@@ -619,7 +628,7 @@ Ir a Settings → Branches → Add rule para `main`:
 - [ ] Crear `.github/workflows/deploy.yml` con 3 jobs: validate → build → deploy
 - [ ] Validate job: mvn test, jacoco:check, Trivy scan, SonarCloud, CloudWatch alarms check, audit script, secrets check
 - [ ] Build job: Docker build, ECR push con tag `${{ github.sha }}` + `latest`
-- [ ] Deploy job: ECS update-service, wait stable, publish metrics, health check
+- [ ] Deploy job: SSH a EC2, pull nueva imagen, stop/start container, publish metrics, health check via ALB
 - [ ] Crear `scripts/audit-pipeline.sh` (compartido con Vicente IE5)
 - [ ] Branch Protection Rules en GitHub: PR required, approvals, status checks, admins
 - [ ] 4 demostraciones de falla capturadas: seguridad, calidad, cobertura, quality gate

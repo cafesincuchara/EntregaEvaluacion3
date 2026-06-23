@@ -1,7 +1,7 @@
 # Vicente — Persona B
 
 **Proyecto:** [EvaluacionParcial2](https://github.com/cafesincuchara/EvaluacionParcial2) — `productosapi`
-**Responsable de:** IE2 (Docker + AWS ECS) + IE5 (Cumplimiento) + IE4 (Documentación)
+**Responsable de:** IE2 (Docker + AWS EC2) + IE5 (Cumplimiento) + IE4 (Documentación)
 **Ponderación total:** 20% + 20% + 10% = **50%**
 
 ## Estado actual del repositorio
@@ -11,30 +11,31 @@
 - `Dockerfile` (básico multi-stage, **sin** HEALTHCHECK ni non-root user)
 - `src/` completo con Java, tests, `sonar-project.properties`
 - `.github/dependabot.yml` (básico, sin labels ni limits)
-- `.github/workflows/ci-pipeline.yml` (workflow simple con deploy a Render, **no a ECS**)
+- `.github/workflows/ci-pipeline.yml` (workflow simple con deploy a Render)
 
 ### Lo que FALTA implementar (tu responsabilidad)
 
 | Prioridad | Archivo/Tarea | IE | Descripción |
 |---|---|---|---|
-| 🔴 Alta | `cloudformation/productosapi-infra.yml` | IE2 | Plantilla CloudFormation: VPC, ALB, ECS Fargate, Task Definition, Auto Scaling |
-| 🔴 Alta | `Dockerfile` - actualizar | IE2 | Agregar HEALTHCHECK, non-root user (appuser), copiar application.properties |
+| 🔴 Alta | `Dockerfile` - actualizar | IE2 | Agregar HEALTHCHECK (curl), non-root user (appuser), copiar application.properties |
+| 🔴 Alta | Crear infraestructura manual (Consola AWS) | IE2 | Security Groups, Target Group, ALB, EC2 con Docker |
 | 🔴 Alta | `pom.xml` - plugins de calidad | IE5 | Agregar JaCoCo (check 80%), Checkstyle (google_checks), PMD (bestpractices + security) |
 | 🔴 Alta | `scripts/audit-pipeline.sh` | IE5 | Crear script de auditoría (compartido con Brayan IE6) |
 | 🔴 Alta | `docs/` - 3 documentos | IE4 | arquitectura-observabilidad.md, pipeline-ci-cd.md, mejora-continua.md |
 | 🟡 Media | ECR repository (AWS CLI) | IE2 | Crear con scanOnPush=true y pushear imagen inicial |
-| 🟡 Media | Deploy CloudFormation stack (AWS CLI) | IE2 | create-stack, verificar CREATE_COMPLETE |
+| 🟡 Media | Lanzar EC2 con user data | IE2 | Instalar Docker, pull imagen, ejecutar contenedor |
+| 🟡 Media | Registrar EC2 en Target Group | IE2 | Asociar IP privada al TG, verificar healthy |
 | 🟡 Media | GitHub Secrets (Settings) | IE2 | Configurar AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, SONAR_TOKEN |
 | 🟡 Media | SonarCloud Quality Gate (UI web) | IE5 | Crear `ProductosAPI-QG`: coverage ≥ 80%, rating A, code smells ≤ 20 |
 | 🟡 Media | Branch Protection Rules (Settings GitHub) | IE5 | main: PR, approvals, status checks, admins. develop: PR, approvals |
 | 🟡 Media | Actualizar `.github/dependabot.yml` | IE5 | Agregar open-pull-requests-limit: 10 y labels |
-| 🟡 Media | Probar despliegue manual | IE2 | curl a ALB DNS, verificar tareas ECS |
-| 🔵 Baja | 8 capturas de pantalla para documentación | IE4 | Dashboard, pipeline, SonarCloud, branch rules, ECS, ALB, CloudFormation |
+| 🟡 Media | Probar despliegue | IE2 | curl a ALB DNS, verificar contenedor con docker ps |
+| 🔵 Baja | 8 capturas de pantalla para documentación | IE4 | Dashboard, pipeline, SonarCloud, branch rules, EC2, ALB, ECR |
 | 🔵 Baja | Reflexiones individuales (sin IA) | IE4 | Brayan: IE1/IE3/IE6; Vicente: IE2/IE5/IE4 |
 
 ---
 
-## IE2 — Desplegar microservicio con Docker en AWS ECS (20%)
+## IE2 — Desplegar microservicio con Docker en AWS EC2 (20%)
 
 ### Objetivo para 100%
 > "Despliega eficazmente microservicios en entornos orquestados en la nube, integrando **de forma automatizada todas las configuraciones necesarias** para el monitoreo, trazabilidad y observabilidad."
@@ -60,7 +61,7 @@ COPY --from=builder /app/target/*.jar app.jar
 COPY --from=builder /app/src/main/resources/application.properties application.properties
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-  CMD wget -qO- http://localhost:8080/actuator/health || exit 1
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
 
 EXPOSE 8080
 USER appuser
@@ -84,292 +85,72 @@ docker tag productosapi:latest <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/prod
 docker push <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/productosapi:latest
 ```
 
-#### 3. Crear infraestructura con CloudFormation
+#### 3. Crear infraestructura manual en AWS Console
 
-Crear `cloudformation/productosapi-infra.yml`:
+Se optó por despliegue manual (no CloudFormation) porque AWS Academy/Vocareum no permite crear IAM Roles, VPC ni algunos recursos vía CloudFormation. Los pasos fueron:
 
-```yaml
-AWSTemplateFormatVersion: '2010-09-09'
-Description: Infraestructura ECS para ProductosAPI - EP3
+##### a. Security Groups
 
-Parameters:
-  EnvironmentName:
-    Type: String
-    Default: production
-  ECRRepositoryName:
-    Type: String
-    Default: productosapi
-  DesiredCount:
-    Type: Number
-    Default: 2
-  ContainerCpu:
-    Type: Number
-    Default: 512
-  ContainerMemory:
-    Type: Number
-    Default: 1024
+| Grupo | Propósito | Reglas Inbound |
+|---|---|---|
+| `productosapi-alb-sg` | ALB → internet | HTTP 80 desde `0.0.0.0/0` |
+| `productosapi-ecs-sg` | Instancia EC2 | HTTP 8080 desde `sg-09e3764d254ddee15` (ALB SG) |
 
-Resources:
-  # VPC
-  VPC:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: 10.0.0.0/16
-      EnableDnsSupport: true
-      EnableDnsHostnames: true
-      Tags: [{ Key: Name, Value: !Sub "${EnvironmentName}-vpc" }]
+##### b. Target Group
 
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags: [{ Key: Name, Value: !Sub "${EnvironmentName}-igw" }]
-  VPCGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      VpcId: !Ref VPC
-      InternetGatewayId: !Ref InternetGateway
+- **Nombre:** `productosapi-tg` · **Tipo:** IP · **Protocolo:** HTTP:8080
+- **VPC:** `vpc-02cc1c60d66d70b32`
+- **Health check:** `/actuator/health` → HTTP 200
 
-  PublicSubnet1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.0.1.0/24
-      AvailabilityZone: !Select [0, !GetAZs ""]
-      MapPublicIpOnLaunch: true
-  PublicSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.0.2.0/24
-      AvailabilityZone: !Select [1, !GetAZs ""]
-      MapPublicIpOnLaunch: true
+##### c. Application Load Balancer
 
-  PublicRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-  PublicRoute:
-    Type: AWS::EC2::Route
-    DependsOn: VPCGatewayAttachment
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-  Subnet1RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref PublicSubnet1
-      RouteTableId: !Ref PublicRouteTable
-  Subnet2RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref PublicSubnet2
-      RouteTableId: !Ref PublicRouteTable
+- **Nombre:** `productosapi-alb` · **Scheme:** Internet-facing · **IP:** IPv4
+- **Subnets:** `subnet-0f468ed17ab154564` (us-east-1a), `subnet-0b9fca0167f69f5b6` (us-east-1b)
+- **Listener:** HTTP:80 → forward a `productosapi-tg`
+- **DNS:** `productosapi-alb-1646067421.us-east-1.elb.amazonaws.com`
 
-  # ALB
-  ALBSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: ALB SG - HTTP from internet
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
+##### d. Lanzar instancia EC2 (Amazon Linux 2023)
 
-  ALB:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Name: !Sub "${EnvironmentName}-alb"
-      Subnets: [!Ref PublicSubnet1, !Ref PublicSubnet2]
-      SecurityGroups: [!Ref ALBSecurityGroup]
-      Scheme: internet-facing
-      Type: application
-      Tags: [{ Key: Name, Value: !Sub "${EnvironmentName}-alb" }]
+En AWS Console → EC2 → Launch instance:
 
-  ALBTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      Name: !Sub "${EnvironmentName}-tg"
-      Port: 8080
-      Protocol: HTTP
-      TargetType: ip
-      VpcId: !Ref VPC
-      HealthCheckPath: /actuator/health
-      HealthCheckIntervalSeconds: 30
-      HealthyThresholdCount: 2
-      UnhealthyThresholdCount: 3
-      Matcher: { HttpCode: "200" }
-      Tags: [{ Key: Name, Value: !Sub "${EnvironmentName}-tg" }]
+| Parámetro | Valor |
+|---|---|
+| Nombre | `productosapi-ec2` |
+| AMI | Amazon Linux 2023 (free tier) |
+| Tipo | `t2.micro` o `t3.micro` |
+| VPC | `vpc-02cc1c60d66d70b32` |
+| Subnet | `subnet-0f468ed17ab154564` (pública) |
+| Auto-assign Public IP | Enable |
+| Security Group | `productosapi-ecs-sg` (puerto 8080 abierto) |
+| Storage | 20 GB gp2 |
 
-  ALBListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions: [{ Type: forward, TargetGroupArn: !Ref ALBTargetGroup }]
-      LoadBalancerArn: !Ref ALB
-      Port: 80
-      Protocol: HTTP
+**User data** (al lanzar):
 
-  # ECS
-  ECSCluster:
-    Type: AWS::ECS::Cluster
-    Properties:
-      ClusterName: !Sub "${EnvironmentName}-cluster"
-      CapacityProviders: [FARGATE]
-      DefaultCapacityProviderStrategy:
-        - CapacityProvider: FARGATE
-          Weight: 1
-      Configuration:
-        ExecuteCommandConfiguration:
-          Logging: DEFAULT
-
-  CloudWatchLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: "/productosapi/microservice"
-      RetentionInDays: 30
-
-  # IAM Roles
-  ECSExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal: { Service: ecs-tasks.amazonaws.com }
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
-
-  ECSTaskRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal: { Service: ecs-tasks.amazonaws.com }
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/CloudWatchFullAccess
-        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
-
-  ECSSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: ECS SG - traffic from ALB
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
-          SourceSecurityGroupId: !Ref ALBSecurityGroup
-
-  # Task Definition (con logging, health check, y trazabilidad)
-  TaskDefinition:
-    Type: AWS::ECS::TaskDefinition
-    Properties:
-      Family: !Sub "${EnvironmentName}-task"
-      Cpu: !Ref ContainerCpu
-      Memory: !Ref ContainerMemory
-      NetworkMode: awsvpc
-      RequiresCompatibilities: [FARGATE]
-      ExecutionRoleArn: !Ref ECSExecutionRole
-      TaskRoleArn: !Ref ECSTaskRole
-      ContainerDefinitions:
-        - Name: productosapi-container
-          Image: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepositoryName}:latest"
-          Essential: true
-          PortMappings:
-            - ContainerPort: 8080
-              Protocol: tcp
-          Environment:
-            - Name: AWS_REGION
-              Value: !Ref AWS::Region
-            - Name: MANAGEMENT_METRICS_EXPORT_CLOUDWATCH_ENABLED
-              Value: "true"
-            - Name: SERVER_PORT
-              Value: "8080"
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: !Ref CloudWatchLogGroup
-              awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: "ecs-productosapi"
-          HealthCheck:
-            Command:
-              - "CMD-SHELL"
-              - "wget -qO- http://localhost:8080/actuator/health || exit 1"
-            Interval: 30
-            Timeout: 5
-            StartPeriod: 60
-            Retries: 3
-
-  # ECS Service
-  ECSService:
-    Type: AWS::ECS::Service
-    DependsOn: ALBListener
-    Properties:
-      ServiceName: !Sub "${EnvironmentName}-service"
-      Cluster: !Ref ECSCluster
-      TaskDefinition: !Ref TaskDefinition
-      DesiredCount: !Ref DesiredCount
-      LaunchType: FARGATE
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          Subnets: [!Ref PublicSubnet1, !Ref PublicSubnet2]
-          SecurityGroups: [!Ref ECSSecurityGroup]
-          AssignPublicIp: ENABLED
-      LoadBalancers:
-        - ContainerName: productosapi-container
-          ContainerPort: 8080
-          TargetGroupArn: !Ref ALBTargetGroup
-      DeploymentConfiguration:
-        DeploymentCircuitBreaker:
-          Enable: true
-          Rollback: true
-        MaximumPercent: 200
-        MinimumHealthyPercent: 100
-      HealthCheckGracePeriodSeconds: 60
-      EnableECSManagedTags: true
-      PropagateTags: SERVICE
-
-  # Auto Scaling
-  AutoScalingTarget:
-    Type: AWS::ApplicationAutoScaling::ScalableTarget
-    Properties:
-      MaxCapacity: 4
-      MinCapacity: 1
-      ResourceId: !Sub "service/${ECSCluster}/${ECSService}"
-      ScalableDimension: ecs:service:DesiredCount
-      ServiceNamespace: ecs
-  AutoScalingPolicyCPU:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Properties:
-      PolicyName: cpu-target-tracking
-      PolicyType: TargetTrackingScaling
-      ScalingTargetId: !Ref AutoScalingTarget
-      TargetTrackingScalingPolicyConfiguration:
-        PredefinedMetricSpecification:
-          PredefinedMetricType: ECSServiceAverageCPUUtilization
-        TargetValue: 70
-        ScaleInCooldown: 120
-        ScaleOutCooldown: 60
-
-Outputs:
-  LoadBalancerDNS:
-    Description: ALB DNS Name
-    Value: !GetAtt ALB.DNSName
-  ECSClusterName:
-    Description: ECS Cluster Name
-    Value: !Ref ECSCluster
-  ECSServiceName:
-    Description: ECS Service Name
-    Value: !Ref ECSService
+```bash
+#!/bin/bash
+yum update -y
+yum install -y docker
+systemctl enable docker
+systemctl start docker
+aws ecr get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin 905418035297.dkr.ecr.us-east-1.amazonaws.com
+docker pull 905418035297.dkr.ecr.us-east-1.amazonaws.com/productosapi:latest
+docker run -d -p 8080:8080 \
+  --name productosapi \
+  --log-driver awslogs \
+  --log-opt awslogs-group=/productosapi/microservice \
+  --log-opt awslogs-region=us-east-1 \
+  --log-opt awslogs-stream-prefix=ec2-productosapi \
+  -e SERVER_PORT=8080 \
+  -e AWS_REGION=us-east-1 \
+  905418035297.dkr.ecr.us-east-1.amazonaws.com/productosapi:latest
 ```
+
+##### e. Registrar la EC2 en el Target Group
+
+- EC2 → Target Groups → `productosapi-tg` → Register targets
+- IP: `<private-ip-de-la-ec2>` · Port: `8080`
+- Verificar que pase a healthy
 
 #### 4. Desplegar infraestructura
 
@@ -401,29 +182,35 @@ En Settings → Secrets and variables → Actions:
 
 | Secret | Valor |
 |---|---|
-| `AWS_ACCESS_KEY_ID` | Access Key de IAM con permisos ECS, ECR, CloudFormation, CloudWatch |
+| `AWS_ACCESS_KEY_ID` | Access Key de IAM con permisos EC2, ECR, CloudWatch |
 | `AWS_SECRET_ACCESS_KEY` | Secret Key correspondiente |
 | `AWS_REGION` | `us-east-1` |
 | `SONAR_TOKEN` | Token de SonarCloud |
 
-#### 6. Probar el despliegue manual
+#### 6. Probar el despliegue
 
 ```bash
 # Verificar que el ALB responde
-curl -f http://<ALB-DNS>/actuator/health
-curl -f http://<ALB-DNS>/api/v1/products
+curl -f http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/actuator/health
+curl -f http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products
 
-# Verificar tareas de ECS
-aws ecs list-tasks --cluster productosapi-cluster
-aws ecs describe-tasks --cluster productosapi-cluster --tasks <task-ids>
+# Verificar que la EC2 está corriendo
+aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=productosapi-ec2" \
+  --query 'Reservations[0].Instances[0].State.Name'
+
+# Verificar Docker corriendo (SSH a la EC2)
+ssh -i <key.pem> ec2-user@<public-ip>
+docker ps
+docker logs productosapi
 ```
 
 #### 7. Evidencias
-- Pantallazo de CloudFormation Stack con estado `CREATE_COMPLETE`
-- Pantallazo de ECS Cluster con 2 tareas en estado `RUNNING`
+- Pantallazo de EC2 instancia en estado `Running`
 - Pantallazo de ECR con la imagen `productosapi:latest`
-- Pantallazo del ALB con Target Group saludable
+- Pantallazo del ALB con Target Group saludable (EC2 registrada como target)
 - Pantallazo del ALB DNS respondiendo al endpoint `/api/v1/products`
+- Pantallazo de `docker ps` mostrando el contenedor ejecutándose
 - Pantallazo de GitHub Secrets configurados
 
 ---
@@ -674,7 +461,7 @@ updates:
                                ▼             ▼              ▼
                          ┌──────────┐ ┌──────────┐ ┌──────────────┐
                          │ Validate │ │  Build   │ │   Deploy     │
-                         │ • Tests  │ │ • Maven  │ │ • ECS update │
+                         │ • Tests  │ │ • Maven  │                           │ • SSH + Docker│
                          │ • Sonar  │ │ • Docker │ │ • Health     │
                          │ • Trivy  │ │ • ECR    │ │ • Metrics    │
                          │ • Audit  │ │          │ │              │
@@ -682,10 +469,10 @@ updates:
                                                             │
                                                             ▼
                                                   ┌──────────────────┐
-                                                  │  AWS ECS         │
+                                                  │  AWS EC2         │
                                                   │ ┌──────────────┐ │
                                                   │ │ productosapi  │ │
-                                                  │ │ (2 tareas)   │ │
+                                                  │ │ (Docker)     │ │
                                                   │ └──────────────┘ │
                                                   └────────┬─────────┘
                                                            │
@@ -708,7 +495,7 @@ updates:
 
 ### 2.1 AWS CloudWatch
 - **Integración:** 
-  - Log driver en ECS Task Definition envía stdout/stderr a CloudWatch Logs
+  - Log driver awslogs en Docker envía stdout/stderr a CloudWatch Logs
   - Micrometer Registry publica métricas de negocio (requests, errores, productos creados)
   - CloudWatch Agent (si aplica) publica métricas del sistema
 - **Propósito en el pipeline:**
@@ -793,7 +580,7 @@ El pipeline se ejecuta en cada push a `main` o `develop`, y en PRs hacia `main`.
 ┌────────────────────────────────────────────────────────────┐
 │  JOB 3: deploy                                             │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │ 1. Forzar nuevo deployment en ECS                   │  │
+│  │ 1. SSH a EC2, pull imagen, restart contenedor       │  │
 │  │ 2. Esperar a que el servicio estabilice             │  │
 │  │ 3. Publicar métricas (Deploy Duration, Coverage)    │  │
 │  │ 4. Verificar health endpoint                        │  │
@@ -801,7 +588,7 @@ El pipeline se ejecuta en cada push a `main` o `develop`, y en PRs hacia `main`.
 └────────────────────────────────────────────────────────────┘
                        │
                        ▼
-            ✅ Producción (ECS Fargate)
+            ✅ Producción (EC2 + Docker)
 ```
 
 ## Seguridad en el pipeline
@@ -848,9 +635,9 @@ El pipeline se ejecuta en cada push a `main` o `develop`, y en PRs hacia `main`.
 | 3 | Pipeline fallando | Demostración de falla de seguridad/calidad |
 | 4 | SonarCloud Quality Gate | PASSED con coverage ≥ 80% |
 | 5 | Branch Protection Rules | Configuración completa |
-| 6 | ECS Cluster | 2 tareas RUNNING |
-| 7 | ALB Target Group | Healthy state |
-| 8 | CloudFormation Stack | CREATE_COMPLETE |
+| 6 | EC2 instancia | Estado Running + `docker ps` con contenedor activo |
+| 7 | ALB Target Group | EC2 registrada como target, estado healthy |
+| 8 | ECR Repository | Imagen `productosapi:latest` con tag |
 
 #### 5. Reflexiones individuales (obligatorio, SIN IA)
 
@@ -862,17 +649,17 @@ Cada integrante debe incluir en las conclusiones del informe final:
 ---
 
 ## Checklist IE2 (20%) — Estado: ❌ No iniciado
-- [ ] `Dockerfile`: Agregar HEALTHCHECK, non-root user (appuser), copiar application.properties
-- [ ] `cloudformation/productosapi-infra.yml`: Crear plantilla CloudFormation completa
+- [ ] `Dockerfile`: Agregar HEALTHCHECK (curl), non-root user (appuser), copiar application.properties
 - [ ] ECR repository creado con `--image-scanning-configuration scanOnPush=true`
 - [ ] Imagen Docker construida y subida a ECR
-- [ ] CloudFormation stack desplegado (CREATE_COMPLETE)
-- [ ] ECS Cluster con 2 tareas RUNNING
-- [ ] ALB con Target Group saludable (health check /actuator/health)
-- [ ] Auto Scaling por CPU (target 70%, min 1, max 4)
+- [ ] Security Groups creados: ALB SG (HTTP 80) + EC2 SG (HTTP 8080 desde ALB SG)
+- [ ] Target Group `productosapi-tg` creado (HTTP:8080, /actuator/health)
+- [ ] ALB `productosapi-alb` creado (internet-facing, listener HTTP:80 → TG)
+- [ ] EC2 instancia `productosapi-ec2` lanzada con user data (Docker + pull + run)
+- [ ] EC2 registrada como target en el Target Group (healthy)
+- [ ] ALB DNS respondiendo a `/actuator/health` y `/api/v1/products`
 - [ ] GitHub Secrets configurados: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, SONAR_TOKEN
-- [ ] ALB DNS respondiendo a `/api/v1/products`
-- [ ] Pantallazos: CloudFormation, ECS cluster, ECR, ALB, GitHub Secrets
+- [ ] Pantallazos: EC2 running, ECR, ALB + TG healthy, docker ps, GitHub Secrets
 
 ## Checklist IE5 (20%) — Estado: ❌ No iniciado
 - [ ] `pom.xml`: Agregar plugins JaCoCo (check ≥ 80%), Checkstyle (google_checks), PMD (bestpractices + security)
