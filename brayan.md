@@ -606,29 +606,29 @@ Ir a Settings → Branches → Add rule para `main`:
 
 ---
 
-## Checklist IE1 (20%) — Estado: ❌ No iniciado
-- [ ] `pom.xml`: Agregar micrometer-registry-cloudwatch2, actuator, aws-xray
-- [ ] `application.properties`: Agregar logging JSON y CloudWatch metrics
-- [ ] Crear `config/MetricsConfig.java` con requestCounter, errorCounter, productCreatedCounter
-- [ ] Modificar `ProductController.java`: inyectar e incrementar contadores
-- [ ] Modificar `GlobalExceptionHandler.java`: incrementar errorCounter en catch
-- [ ] Modificar `ProductosapiApplication.java`: agregar `@XRayEnabled`
-- [ ] Log group `/productosapi/microservice` creado y recibiendo logs (desde Docker awslogs driver)
-- [ ] 4 alarmas CloudWatch configuradas (CPU, Memory, ErrorSpike, UnhealthyHost)
-- [ ] Pantallazos: logs (CloudWatch Insights), métricas, alarmas OK, X-Ray service map
+## Checklist IE1 (20%) — Estado: 🔵 Parcial (código listo, faltan acciones en AWS y evidencias)
+- [x] `pom.xml`: Agregar micrometer-registry-cloudwatch2, actuator, aws-xray
+- [x] `application.properties`: Agregar logging JSON y CloudWatch metrics
+- [x] Crear `config/MetricsConfig.java` con requestCounter, errorCounter, productCreatedCounter
+- [x] Modificar `ProductController.java`: inyectar e incrementar contadores
+- [x] Modificar `GlobalExceptionHandler.java`: incrementar errorCounter en catch
+- [x] Modificar `ProductosapiApplication.java`: agregar `@XRayEnabled`
+- [ ] Log group `/productosapi/microservice` creado y recibiendo logs (desde Docker awslogs driver) — *manual AWS Console*
+- [ ] 4 alarmas CloudWatch configuradas (CPU, Memory, ErrorSpike, UnhealthyHost) — *script en `scripts/create-alarms.sh` listo, falta ejecutar*
+- [ ] Pantallazos: logs (CloudWatch Insights), métricas, alarmas OK, X-Ray service map — *pendiente*
 
-## Checklist IE3 (10%) — Estado: ❌ No iniciado
-- [ ] Dashboard `ProductosAPI-EP3` creado en CloudWatch
-- [ ] 7 widgets configurados (CPU, Memory, Deploy Duration, Coverage, Errors, Requests, Availability)
-- [ ] Pipeline publica métricas de deploy duration y coverage (steps en deploy.yml)
-- [ ] Auto-refresh activado (1 minuto)
-- [ ] Pantallazo del dashboard completo + datos históricos 24h
+## Checklist IE3 (10%) — Estado: 🔵 Parcial (scripts listos, faltan ejecución y evidencias)
+- [ ] Dashboard `ProductosAPI-EP3` creado en CloudWatch — *script en `scripts/create-dashboard.sh` listo, falta ejecutar*
+- [ ] 7 widgets configurados (CPU, Memory, Deploy Duration, Coverage, Errors, Requests, Availability) — *en script create-dashboard.sh*
+- [x] Pipeline publica métricas de deploy duration y coverage (steps en deploy.yml) — *en job deploy*
+- [ ] Auto-refresh activado (1 minuto) — *manual AWS Console*
+- [ ] Pantallazo del dashboard completo + datos históricos 24h — *pendiente*
 
-## Checklist IE6 (20%) — Estado: ❌ No iniciado
-- [ ] Crear `.github/workflows/deploy.yml` con 3 jobs: validate → build → deploy
-- [ ] Validate job: mvn test, jacoco:check, Trivy scan, SonarCloud, CloudWatch alarms check, audit script, secrets check
-- [ ] Build job: Docker build, ECR push con tag `${{ github.sha }}` + `latest`
-- [ ] Deploy job: SSH a EC2, pull nueva imagen, stop/start container, publish metrics, health check via ALB
-- [ ] Crear `scripts/audit-pipeline.sh` (compartido con Vicente IE5)
-- [ ] Branch Protection Rules en GitHub: PR required, approvals, status checks, admins
-- [ ] 4 demostraciones de falla capturadas: seguridad, calidad, cobertura, quality gate
+## Checklist IE6 (20%) — Estado: 🔵 Parcial (workflow y script listos, faltan config GitHub y evidencias)
+- [x] Crear `.github/workflows/deploy.yml` con 3 jobs: validate → build → deploy
+- [x] Validate job: mvn test, jacoco:check, Trivy scan, SonarCloud, CloudWatch alarms check, audit script, secrets check
+- [x] Build job: Docker build, ECR push con tag `${{ github.sha }}` + `latest`
+- [x] Deploy job: SSH a EC2, pull nueva imagen, stop/start container, publish metrics, health check via ALB
+- [x] Crear `scripts/audit-pipeline.sh` (compartido con Vicente IE5)
+- [ ] Branch Protection Rules en GitHub: PR required, approvals, status checks, admins — *manual GitHub Settings*
+- [ ] 4 demostraciones de falla capturadas: seguridad, calidad, cobertura, quality gate — *pendiente*
