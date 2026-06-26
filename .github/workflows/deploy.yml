@@ -1,0 +1,194 @@
+name: Deploy ProductosAPI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: productosapi
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      # ===== VALIDACIONES QUE DETIENEN EL PIPELINE =====
+
+      # VALIDACIÓN 1: Compilar y ejecutar tests
+      - name: Run unit tests
+        run: mvn clean test
+
+      # VALIDACIÓN 2: Verificar cobertura con JaCoCo
+      - name: Check test coverage (min 80%)
+        run: |
+          mvn jacoco:report jacoco:check
+          COVERAGE=$(grep -oP 'Total.*?([0-9]+\.[0-9]+)' target/site/jacoco/index.html | head -1)
+          echo "Cobertura: $COVERAGE%"
+
+      # VALIDACIÓN 3: Escaneo de seguridad con Trivy
+      - name: Trivy security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      # VALIDACIÓN 4: SonarCloud Quality Gate
+      - name: SonarCloud analysis
+        run: |
+          mvn verify sonar:sonar \
+            -Dsonar.projectKey=productosapi \
+            -Dsonar.organization=cafesincuchara \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+
+      - name: Check Quality Gate status
+        run: |
+          sleep 15
+          STATUS=$(curl -s -u ${{ secrets.SONAR_TOKEN }}: \
+            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=productosapi" \
+            | jq -r '.projectStatus.status')
+          if [ "$STATUS" != "OK" ]; then
+            echo "❌ Quality Gate: $STATUS"
+            exit 1
+          fi
+          echo "✅ Quality Gate: PASSED"
+
+      # VALIDACIÓN 5: Verificar CloudWatch Alarms
+      - name: Check CloudWatch Alarms before deploy
+        run: |
+          ALARMS=$(aws cloudwatch describe-alarms \
+            --state-value ALARM \
+            --alarm-name-prefix "productosapi" \
+            --query 'MetricAlarms[*].AlarmName' \
+            --output text)
+          if [ -n "$ALARMS" ]; then
+            echo "❌ Alarmas en estado ALARM: $ALARMS"
+            exit 1
+          fi
+          echo "✅ Todas las alarmas de CloudWatch están OK"
+
+      # VALIDACIÓN 6: Auditoría automatizada
+      - name: Run audit script
+        run: chmod +x scripts/audit-pipeline.sh && ./scripts/audit-pipeline.sh
+
+      # VALIDACIÓN 7: Verificar que no hay secretos hardcodeados
+      - name: Check for secrets
+        run: |
+          if grep -rP '(?i)(password|secret|token|api.key|apikey)\s*[:=]\s*["'"'"'][^"'"'"']+' \
+            --include='*.{java,yml,yaml,properties,json,sh}' src/ .github/; then
+            echo "❌ Posibles secretos encontrados en el código"
+            exit 1
+          fi
+          echo "✅ No se encontraron secretos"
+
+  build:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            aws ecr get-login-password --region us-east-1 | \
+              docker login --username AWS --password-stdin 905418035297.dkr.ecr.us-east-1.amazonaws.com
+            docker pull 905418035297.dkr.ecr.us-east-1.amazonaws.com/productosapi:latest
+            docker stop productosapi || true
+            docker rm productosapi || true
+            docker run -d -p 8080:8080 \
+              --name productosapi \
+              --log-driver awslogs \
+              --log-opt awslogs-group=/productosapi/microservice \
+              --log-opt awslogs-region=us-east-1 \
+              --log-opt awslogs-stream-prefix=ec2-productosapi \
+              -e SERVER_PORT=8080 \
+              -e AWS_REGION=us-east-1 \
+              905418035297.dkr.ecr.us-east-1.amazonaws.com/productosapi:latest
+
+      - name: Publish deployment duration
+        run: |
+          START_TIME=$(date -d "${{ github.event.head_commit.timestamp }}" +%s 2>/dev/null || echo $(date +%s))
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          aws cloudwatch put-metric-data \
+            --namespace ProductosAPI \
+            --metric-name DeploymentDuration \
+            --value $DURATION \
+            --unit Seconds \
+            --dimensions Environment=Production
+
+      - name: Publish test coverage
+        run: |
+          COVERAGE=$(grep -oP 'Total.*?([0-9]+\.[0-9]+)' target/site/jacoco/index.html 2>/dev/null | head -1 || echo "0")
+          aws cloudwatch put-metric-data \
+            --namespace ProductosAPI \
+            --metric-name TestCoverage \
+            --value $(echo $COVERAGE | grep -oP '[0-9]+\.[0-9]+' || echo "0") \
+            --unit Percent \
+            --dimensions Environment=Production,Service=productosapi
+
+      - name: Verify deployment health
+        run: |
+          ALB_DNS=$(aws elbv2 describe-load-balancers \
+            --names productosapi-alb \
+            --query 'LoadBalancers[0].DNSName' \
+            --output text 2>/dev/null || echo "")
+          if [ -n "$ALB_DNS" ]; then
+            curl -sf http://$ALB_DNS/api/v1/products && echo "✅ API saludable"
+          else
+            echo "⚠️ No se pudo verificar health (ALB no disponible)"
+          fi
