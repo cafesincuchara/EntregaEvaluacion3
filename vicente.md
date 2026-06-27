@@ -6,30 +6,26 @@
 
 ## Estado actual del repositorio
 
-### Lo que YA existe (no requiere cambios)
-- `pom.xml` (base, **faltan** plugins JaCoCo, Checkstyle, PMD)
-- `Dockerfile` (básico multi-stage, **sin** HEALTHCHECK ni non-root user)
-- `src/` completo con Java, tests, `sonar-project.properties`
-- `.github/dependabot.yml` (básico, sin labels ni limits)
-- `.github/workflows/ci-pipeline.yml` (workflow simple con deploy a Render)
+### Lo que YA existe (completado)
+- `Dockerfile` multi-stage con HEALTHCHECK, non-root user, curl, application.properties
+- `pom.xml` con dependencias (micrometer, actuator, aws-xray) y plugins de calidad (JaCoCo 80%, Checkstyle, PMD)
+- `src/` completo con Java, tests, MetricsConfig, X-Ray, sonar-project.properties
+- `.github/dependabot.yml` con open-pull-requests-limit: 10 y labels
+- `.github/workflows/ci-pipeline.yml` (workflow con validate → sonar → build-and-push → deploy)
+- `.github/workflows/deploy.yml` (workflow IE6 con 3 jobs y 7 validaciones)
+- `scripts/audit-pipeline.sh` (auditoría automatizada compartida con Brayan)
+- `docs/` con 3 documentos (arquitectura-observabilidad, pipeline-ci-cd, mejora-continua)
+- `.env` con variables de configuración del proyecto
 
-### Lo que FALTA implementar (tu responsabilidad)
+### Lo que PENDIENTE implementar (tu responsabilidad)
 
 | Prioridad | Archivo/Tarea | IE | Descripción |
 |---|---|---|---|
-| 🔴 Alta | `Dockerfile` - actualizar | IE2 | Agregar HEALTHCHECK (curl), non-root user (appuser), copiar application.properties |
-| 🔴 Alta | Crear infraestructura manual (Consola AWS) | IE2 | Security Groups, Target Group, ALB, EC2 con Docker |
-| 🔴 Alta | `pom.xml` - plugins de calidad | IE5 | Agregar JaCoCo (check 80%), Checkstyle (google_checks), PMD (bestpractices + security) |
-| 🔴 Alta | `scripts/audit-pipeline.sh` | IE5 | Crear script de auditoría (compartido con Brayan IE6) |
-| 🔴 Alta | `docs/` - 3 documentos | IE4 | arquitectura-observabilidad.md, pipeline-ci-cd.md, mejora-continua.md |
-| 🟡 Media | ECR repository (AWS CLI) | IE2 | Crear con scanOnPush=true y pushear imagen inicial |
-| 🟡 Media | Lanzar EC2 con user data | IE2 | Instalar Docker, pull imagen, ejecutar contenedor |
-| 🟡 Media | Registrar EC2 en Target Group | IE2 | Asociar IP privada al TG, verificar healthy |
-| 🟡 Media | GitHub Secrets (Settings) | IE2 | Configurar AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, SONAR_TOKEN |
-| 🟡 Media | SonarCloud Quality Gate (UI web) | IE5 | Crear `ProductosAPI-QG`: coverage ≥ 80%, rating A, code smells ≤ 20 |
-| 🟡 Media | Branch Protection Rules (Settings GitHub) | IE5 | main: PR, approvals, status checks, admins. develop: PR, approvals |
-| 🟡 Media | Actualizar `.github/dependabot.yml` | IE5 | Agregar open-pull-requests-limit: 10 y labels |
-| 🟡 Media | Probar despliegue | IE2 | curl a ALB DNS, verificar contenedor con docker ps |
+| 🔴 Alta | ECR repository (AWS CLI/Console) | IE2 | Crear con scanOnPush=true y pushear imagen inicial |
+| 🔴 Alta | SonarCloud Quality Gate (UI web) | IE5 | Crear `ProductosAPI-QG`: coverage ≥ 80%, rating A, code smells ≤ 20 |
+| 🔴 Alta | Branch Protection Rules (Settings GitHub) | IE5 | main: PR, approvals, status checks, admins. develop: PR, approvals |
+| 🟡 Media | GitHub Secrets (Settings) | IE2 | Configurar AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, SONAR_TOKEN, EC2_HOST, EC2_SSH_KEY |
+| 🟡 Media | Probar despliegue completo | IE2 | curl a ALB DNS, pipeline GitHub Actions exitoso |
 | 🔵 Baja | 8 capturas de pantalla para documentación | IE4 | Dashboard, pipeline, SonarCloud, branch rules, EC2, ALB, ECR |
 | 🔵 Baja | Reflexiones individuales (sin IA) | IE4 | Brayan: IE1/IE3/IE6; Vicente: IE2/IE5/IE4 |
 
@@ -648,32 +644,32 @@ Cada integrante debe incluir en las conclusiones del informe final:
 
 ---
 
-## Checklist IE2 (20%) — Estado: ❌ No iniciado
-- [ ] `Dockerfile`: Agregar HEALTHCHECK (curl), non-root user (appuser), copiar application.properties
-- [ ] ECR repository creado con `--image-scanning-configuration scanOnPush=true`
-- [ ] Imagen Docker construida y subida a ECR
-- [ ] Security Groups creados: ALB SG (HTTP 80) + EC2 SG (HTTP 8080 desde ALB SG)
-- [ ] Target Group `productosapi-tg` creado (HTTP:8080, /actuator/health)
-- [ ] ALB `productosapi-alb` creado (internet-facing, listener HTTP:80 → TG)
-- [ ] EC2 instancia `productosapi-ec2` lanzada con user data (Docker + pull + run)
-- [ ] EC2 registrada como target en el Target Group (healthy)
-- [ ] ALB DNS respondiendo a `/actuator/health` y `/api/v1/products`
-- [ ] GitHub Secrets configurados: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, SONAR_TOKEN
+## Checklist IE2 (20%) — Estado: 🟡 Parcial (código listo, ECR con imagen, falta Secrets + ALB healthy + evidencias)
+- [x] `Dockerfile`: HEALTHCHECK (curl), non-root user (appuser), application.properties — ✅
+- [x] ECR repository creado con `scanOnPush=true` — ✅
+- [x] Imagen Docker construida y subida a ECR (`latest` + `57e59ce`) — ✅
+- [x] Security Groups creados: ALB SG (HTTP 80) + EC2 SG (HTTP 8080 desde ALB SG) — ✅
+- [x] Target Group `productosapi-tg` creado (HTTP:8080, /actuator/health) — ✅
+- [x] ALB `productosapi-alb` creado (internet-facing, listener HTTP:80 → TG) — ✅
+- [x] EC2 instancia `productosapi-ec2` lanzada — ✅
+- [x] EC2 registrada como target en el Target Group — ✅ (pero unhealthy)
+- [ ] ALB DNS respondiendo a `/actuator/health` y `/api/v1/products` — ❌ (502 Bad Gateway, health check failing)
+- [x] GitHub Secrets configurados (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, EC2_HOST, EC2_SSH_KEY) — ✅
 - [ ] Pantallazos: EC2 running, ECR, ALB + TG healthy, docker ps, GitHub Secrets
 
-## Checklist IE5 (20%) — Estado: ❌ No iniciado
-- [ ] `pom.xml`: Agregar plugins JaCoCo (check ≥ 80%), Checkstyle (google_checks), PMD (bestpractices + security)
-- [ ] SonarCloud Quality Gate `ProductosAPI-QG`: coverage ≥ 80%, rating A, code smells ≤ 20
-- [ ] `scripts/audit-pipeline.sh`: Crear script con 6 validaciones (compartido con Brayan)
-- [ ] Branch Protection Rules: `main` (PR, approvals, status checks, admins) + `develop` (PR, approvals)
-- [ ] `.github/dependabot.yml`: Agregar open-pull-requests-limit: 10, labels: dependencies + security
+## Checklist IE5 (20%) — Estado: 🟡 Parcial (plugins, scripts, branch rules listos; falta QG + evidencias)
+- [x] `pom.xml`: JaCoCo (check ≥ 80%), Checkstyle (google_checks), PMD (bestpractices + security) — ✅
+- [x] `scripts/audit-pipeline.sh`: Script con 6 validaciones (compartido con Brayan) — ✅
+- [x] `.github/dependabot.yml`: open-pull-requests-limit: 10, labels: dependencies + security — ✅
+- [x] Branch Protection Rules: `main` + `develop` configuradas vía API — ✅
+- [ ] SonarCloud Quality Gate `ProductosAPI-QG`: coverage ≥ 80%, rating A, code smells ≤ 20 — *pendiente*
 - [ ] Pantallazos: SonarCloud QG passed, branch rules, audit script ejecutándose
 
-## Checklist IE4 (10%) — Estado: ❌ No iniciado
-- [ ] Crear `docs/` directorio
-- [ ] `docs/arquitectura-observabilidad.md`: Diagrama de flujo + tabla de decisiones técnicas
-- [ ] `docs/pipeline-ci-cd.md`: Diagrama de flujo del pipeline validate→build→deploy
-- [ ] `docs/mejora-continua.md`: Ciclo monitorear→analizar→decidir→mejorar
+## Checklist IE4 (10%) — Estado: 🟡 Parcial (3 documentos listos, faltan capturas + reflexiones)
+- [x] `docs/` directorio creado — ✅
+- [x] `docs/arquitectura-observabilidad.md`: Diagrama de flujo + tabla de decisiones técnicas — ✅
+- [x] `docs/pipeline-ci-cd.md`: Diagrama de flujo del pipeline validate→build→deploy — ✅
+- [x] `docs/mejora-continua.md`: Ciclo monitorear→analizar→decidir→mejorar — ✅
 - [ ] 8 capturas de pantalla incluidas en la documentación
 - [ ] Reflexión individual Brayan (IE1, IE3, IE6) — SIN IA
 - [ ] Reflexión individual Vicente (IE2, IE5, IE4) — SIN IA

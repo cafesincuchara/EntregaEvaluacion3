@@ -6,32 +6,29 @@
 
 ## Estado actual del repositorio
 
-### Lo que YA existe (no requiere cambios)
-- `pom.xml` (base, faltan dependencias de micrometer, x-ray, y plugins de calidad)
-- `src/` completo: `ProductController.java`, `ProductService.java`, `ProductRepository.java`, `GlobalExceptionHandler.java`, `ProductosapiApplication.java`, modelos, tests
-- `application.properties` (básico, sin logging JSON ni CloudWatch)
-- `.github/workflows/ci-pipeline.yml` (workflow simple, **no incluye** validaciones de seguridad/calidad)
-- `Dockerfile` (básico, sin HEALTHCHECK)
-- `sonar-project.properties` (configurado para SonarCloud)
+### Lo que YA existe (completado)
+- `pom.xml` con dependencias (micrometer, actuator, aws-xray) y plugins de calidad
+- `src/` completo: `ProductController.java`, `ProductService.java`, `ProductRepository.java`, `GlobalExceptionHandler.java`, `ProductosapiApplication.java`, `MetricsConfig.java`, modelos, tests
+- `application.properties` con logging JSON, CloudWatch metrics, actuator endpoints
+- `.github/workflows/ci-pipeline.yml` (workflow con validate → sonar → build-and-push → deploy)
+- `.github/workflows/deploy.yml` (workflow IE6 con 3 jobs: validate → build → deploy, 7 validaciones)
+- `Dockerfile` con HEALTHCHECK, non-root user, curl
+- `sonar-project.properties` configurado para SonarCloud
+- `scripts/audit-pipeline.sh` (auditoría automatizada)
+- `scripts/create-alarms.sh` (4 alarmas CloudWatch)
+- `scripts/create-dashboard.sh` (dashboard 7 widgets)
+- `.env` con variables de configuración del proyecto
 
-### Lo que FALTA implementar (tu responsabilidad)
+### Lo que PENDIENTE implementar (tu responsabilidad)
 
 | Prioridad | Archivo/Tarea | IE | Descripción |
 |---|---|---|---|
-| 🔴 Alta | `pom.xml` - agregar dependencias | IE1 | micrometer-registry-cloudwatch2, spring-boot-starter-actuator, aws-xray-recorder-sdk-spring |
-| 🔴 Alta | `application.properties` - logging JSON + CloudWatch | IE1 | logging.pattern.console, management.endpoints, management.metrics.export.cloudwatch |
-| 🔴 Alta | `src/main/java/.../config/MetricsConfig.java` | IE1 | Crear clase con contadores: requestCounter, errorCounter, productCreatedCounter |
-| 🔴 Alta | Modificar `ProductController.java` | IE1 | Inyectar contadores e incrementarlos en getAllProduct, createProduct |
-| 🔴 Alta | Modificar `GlobalExceptionHandler.java` | IE1 | Agregar errorCounter.increment() en los catch |
-| 🔴 Alta | `@XRayEnabled` en `ProductosapiApplication.java` | IE1 | Agregar anotación e import |
-| 🔴 Alta | `.github/workflows/deploy.yml` | IE6 | Crear workflow con 3 jobs (validate → build → deploy) y 7 validaciones |
-| 🔴 Alta | `scripts/audit-pipeline.sh` | IE6 | Crear script de auditoría automatizada |
-| 🟡 Media | 4 alarmas CloudWatch (AWS CLI) | IE1 | CPU > 80% (EC2), Memory > 85% (CWAgent), Error spike > 10, UnhealthyHost > 0 |
-| 🟡 Media | Dashboard CloudWatch `ProductosAPI-EP3` | IE3 | 7 widgets: CPU (EC2), Memory (CWAgent), Deploy Duration, Coverage, Errors, Requests, Availability |
-| 🟡 Media | Branch Protection Rules (Settings GitHub) | IE6 | Configurar reglas para `main` y `develop` |
-| 🟡 Media | Publicar métricas desde el pipeline | IE3 | Steps en deploy.yml: DeploymentDuration y TestCoverage |
-| 🔵 Baja | Auto-refresh en dashboard | IE3 | Activar refresh cada 1 minuto + compartir enlace |
-| 🔵 Baja | 4 demostraciones de falla + capturas | IE6 | Falla seguridad, calidad, cobertura baja, Quality Gate |
+| 🔴 Alta | Ejecutar `scripts/create-alarms.sh` (AWS CLI) | IE1 | CPU > 80% (EC2), Memory > 85% (CWAgent), Error spike > 10, UnhealthyHost > 0 |
+| 🔴 Alta | Ejecutar `scripts/create-dashboard.sh` (AWS CLI) | IE3 | Dashboard ProductosAPI-EP3 con 7 widgets |
+| 🔴 Alta | Branch Protection Rules (Settings GitHub) | IE6 | Configurar reglas para `main` y `develop` |
+| 🟡 Media | Crear Log Group `/productosapi/microservice` (AWS Console) | IE1 | Recibir logs desde Docker awslogs driver |
+| 🟡 Media | Auto-refresh en dashboard (AWS Console) | IE3 | Activar refresh cada 1 minuto + compartir enlace |
+| 🟡 Media | 4 demostraciones de falla + capturas | IE6 | Falla seguridad, calidad, cobertura baja, Quality Gate |
 | 🔵 Baja | Pantallazos de evidencias | IE1/IE3/IE6 | Logs, métricas, alarmas, dashboard, pipelines, branch rules |
 
 ---
@@ -606,29 +603,30 @@ Ir a Settings → Branches → Add rule para `main`:
 
 ---
 
-## Checklist IE1 (20%) — Estado: 🔵 Parcial (código listo, faltan acciones en AWS y evidencias)
-- [x] `pom.xml`: Agregar micrometer-registry-cloudwatch2, actuator, aws-xray
-- [x] `application.properties`: Agregar logging JSON y CloudWatch metrics
-- [x] Crear `config/MetricsConfig.java` con requestCounter, errorCounter, productCreatedCounter
-- [x] Modificar `ProductController.java`: inyectar e incrementar contadores
-- [x] Modificar `GlobalExceptionHandler.java`: incrementar errorCounter en catch
-- [x] Modificar `ProductosapiApplication.java`: agregar `@XRayEnabled`
-- [ ] Log group `/productosapi/microservice` creado y recibiendo logs (desde Docker awslogs driver) — *manual AWS Console*
-- [ ] 4 alarmas CloudWatch configuradas (CPU, Memory, ErrorSpike, UnhealthyHost) — *script en `scripts/create-alarms.sh` listo, falta ejecutar*
-- [ ] Pantallazos: logs (CloudWatch Insights), métricas, alarmas OK, X-Ray service map — *pendiente*
+## Checklist IE1 (20%) — Estado: 🟡 Parcial (código listo, 4 alarmas creadas, falta log group + evidencias)
+- [x] `pom.xml`: micrometer-registry-cloudwatch2, actuator, aws-xray — ✅
+- [x] `application.properties`: logging JSON y CloudWatch metrics — ✅
+- [x] `config/MetricsConfig.java`: requestCounter, errorCounter, productCreatedCounter — ✅
+- [x] `ProductController.java`: contadores inyectados e incrementados — ✅
+- [x] `GlobalExceptionHandler.java`: errorCounter.increment() en catch — ✅
+- [x] `ProductosapiApplication.java`: `@XRayEnabled` — ✅
+- [x] `scripts/create-alarms.sh`: Script con 4 alarmas CloudWatch — ✅
+- [x] 4 alarmas CloudWatch creadas (CPU, Memory, ErrorSpike, UnhealthyHost) — ✅
+- [ ] Log group `/productosapi/microservice` creado y recibiendo logs — *AWS Console*
+- [ ] Pantallazos: logs, métricas, alarmas OK, X-Ray — *pendiente*
 
-## Checklist IE3 (10%) — Estado: 🔵 Parcial (scripts listos, faltan ejecución y evidencias)
-- [ ] Dashboard `ProductosAPI-EP3` creado en CloudWatch — *script en `scripts/create-dashboard.sh` listo, falta ejecutar*
-- [ ] 7 widgets configurados (CPU, Memory, Deploy Duration, Coverage, Errors, Requests, Availability) — *en script create-dashboard.sh*
-- [x] Pipeline publica métricas de deploy duration y coverage (steps en deploy.yml) — *en job deploy*
-- [ ] Auto-refresh activado (1 minuto) — *manual AWS Console*
+## Checklist IE3 (10%) — Estado: 🟡 Parcial (dashboard creado, pipeline publica métricas, falta auto-refresh + evidencias)
+- [x] Dashboard `ProductosAPI-EP3` creado con 7 widgets en CloudWatch — ✅
+- [x] Pipeline publica métricas (DeploymentDuration, TestCoverage) en deploy.yml — ✅
+- [ ] Auto-refresh activado (1 minuto) — *AWS Console*
 - [ ] Pantallazo del dashboard completo + datos históricos 24h — *pendiente*
 
-## Checklist IE6 (20%) — Estado: 🔵 Parcial (workflow y script listos, faltan config GitHub y evidencias)
-- [x] Crear `.github/workflows/deploy.yml` con 3 jobs: validate → build → deploy
-- [x] Validate job: mvn test, jacoco:check, Trivy scan, SonarCloud, CloudWatch alarms check, audit script, secrets check
-- [x] Build job: Docker build, ECR push con tag `${{ github.sha }}` + `latest`
-- [x] Deploy job: SSH a EC2, pull nueva imagen, stop/start container, publish metrics, health check via ALB
-- [x] Crear `scripts/audit-pipeline.sh` (compartido con Vicente IE5)
-- [ ] Branch Protection Rules en GitHub: PR required, approvals, status checks, admins — *manual GitHub Settings*
-- [ ] 4 demostraciones de falla capturadas: seguridad, calidad, cobertura, quality gate — *pendiente*
+## Checklist IE6 (20%) — Estado: 🟡 Parcial (workflow, branch rules listos; falta evidencias + demos)
+- [x] `.github/workflows/deploy.yml`: 3 jobs validate → build → deploy — ✅
+- [x] Validate: mvn test, jacoco:check, Trivy, SonarCloud + QG check, CW Alarms, audit, secrets — ✅
+- [x] Build: Docker build, ECR push con tag `${{ github.sha }}` + `latest` — ✅
+- [x] Deploy: SSH a EC2, pull, stop/start, publish metrics, health check — ✅
+- [x] `scripts/audit-pipeline.sh` (compartido con Vicente IE5) — ✅
+- [x] Branch Protection Rules: `main` + `develop` configuradas vía API — ✅
+- [ ] 4 demostraciones de falla capturadas: seguridad, calidad, cobertura, quality gate
+- [ ] Pantallazos: pipeline completo, pipeline fallando, PR bloqueado
