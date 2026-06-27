@@ -1,110 +1,101 @@
-# Evaluacion Parcial 2 - Pipeline CI/CD
+# Evaluacion Parcial 3 - Observabilidad y entornos reales en DevOps
 
 **Integrantes:** Brayan Gonzalez, Vicente Herrera  
-**Repositorio:** [EvaluacionParcial2](https://github.com/cafesincuchara/EvaluacionParcial2)  
-**API en produccion:** [https://productosapi-eta0.onrender.com](https://productosapi-eta0.onrender.com)  
-**SonarCloud:** [https://sonarcloud.io/dashboard?id=productosapi](https://sonarcloud.io/dashboard?id=productosapi&branch=main)
+**Repositorio:** [EntregaEvaluacion3](https://github.com/cafesincuchara/EntregaEvaluacion3)
+**API en produccion:** [http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products](http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products)
+**SonarCloud:** [https://sonarcloud.io/dashboard?id=productosapi](https://sonarcloud.io/dashboard?id=productosapi)
 
 ---
 
 ## Resumen del proyecto
 
-Microservicio REST en Spring Boot 3.4 con operaciones CRUD de productos (GET, POST, PUT, DELETE) y base de datos H2 en memoria. El pipeline automatiza todo el ciclo de vida: compilar, testear, analizar calidad, contenerizar, y desplegar.
+Microservicio REST en Spring Boot 3.4 con operaciones CRUD de productos y base de datos H2 en memoria, desplegado en AWS EC2 con Docker detras de un Application Load Balancer. El pipeline CI/CD automatiza compilacion, pruebas, analisis de calidad, construccion de imagen Docker, push a ECR y despliegue en EC2 via SSH.
 
 ---
 
 ## Pipeline CI/CD (GitHub Actions)
 
-El pipeline se ejecuta en cada push a `main` o `develop` y esta compuesto por 4 jobs secuenciales:
+El pipeline se ejecuta en cada push a `main` o `develop` y esta compuesto por 3 jobs secuenciales:
 
 ```
-[push] → [test] → [sonar] → [docker] → [deploy]
+[push] -> [validate] -> [build] -> [deploy]
 ```
 
-Cada job depende del anterior mediante `needs`, asi si algo falla en el camino no se sigue adelante.
+Cada job depende del anterior mediante `needs`. Si algo falla, no se sigue adelante.
 
-### 1. test
-Compila el proyecto y ejecuta 15 pruebas unitarias con JUnit 5 y Mockito. Usa el wrapper de Maven con JDK 21 (Temurin) y cachea las dependencias.
+### validate
+- Tests unitarios (JUnit 5 + Mockito)
+- JaCoCo: cobertura minima 80%
+- Trivy: escaneo de seguridad (CRITICAL/HIGH detienen el pipeline)
+- SonarCloud: analisis de calidad + Quality Gate
+- Check CloudWatch Alarms (si hay alarmas activas, no despliega)
+- Script de auditoria automatizada
+- Busqueda de secretos hardcodeados
 
-### 2. sonar
-Analiza el codigo con SonarCloud usando el plugin de Maven. Escanea bugs, code smells, vulnerabilidades y coverage. Si el quality gate falla, el pipeline se detiene y no despliega.
+### build
+- Compilar con Maven
+- Construir imagen Docker
+- Subir a Amazon ECR con tag `${{ github.sha }}` + `latest`
 
-### 3. docker
-Construye la imagen del contenedor con Docker Buildx usando un Dockerfile multi-stage. La imagen se etiqueta con el SHA del commit para trazabilidad.
-
-### 4. Despliegue en Render
-Llama a la API de Render (`POST /v1/services/{id}/deploys`) para activar un deploy automatico del servicio.
-
----
-
-## IE1 - Contenerizacion (Dockerfile)
-
-Usamos un Dockerfile multi-stage:
-
-- **Stage 1 (builder):** imagen `maven:3.9.9-eclipse-temurin-21-alpine`, compila el JAR.
-- **Stage 2 (runtime):** imagen `eclipse-temurin:21-jre-alpine`, minima y segura, solo copia el JAR.
-- El puerto se configura con `${PORT:-8080}` para que Render lo asigne dinamicamente.
-
-Incluimos un `.dockerignore` para excluir `target/`, `.git/`, `.idea/` y archivos markdown, reduciendo el contexto de build.
+### deploy
+- SSH a EC2
+- Pull de la ultima imagen desde ECR
+- Stop/start del contenedor con `--log-driver awslogs`
+- Publicar metricas (DeploymentDuration, TestCoverage)
+- Verificar health endpoint
 
 ---
 
-## IE2 - Pruebas automatizadas
+## Infraestructura AWS
 
-Tenemos 3 clases de prueba con JUnit 5:
-
-| Clase | Tipo | Cantidad |
-|-------|------|----------|
-| `ProductosapiApplicationTests` | Contexto de Spring | 1 test |
-| `ProductControllerTest` | MockMvc (controlador) | 6 tests |
-| `ProductServiceTest` | Mockito (servicio) | 8 tests |
-| **Total** | | **15 tests** |
-
-Cubrimos todos los casos: listar, obtener por ID (existente y no encontrado), crear, actualizar y eliminar. Las pruebas se ejecutan primero en el pipeline y si alguna falla no se sigue.
+| Componente | Descripcion |
+|---|---|
+| **EC2** | Instancia `t3.micro` con Amazon Linux 2023, Docker, CloudWatch Agent |
+| **ALB** | Application Load Balancer internet-facing, listener HTTP:80 -> TG |
+| **Target Group** | HTTP:8080, health check `/actuator/health` |
+| **ECR** | Repositorio `productosapi` con `scanOnPush=true` |
+| **CloudWatch** | Logs, metricas personalizadas, 4 alarmas, dashboard con 7 widgets |
 
 ---
 
-## IE3 - Seguridad y calidad
+## Capturas de pantalla
 
-- **Dependabot:** configurado para revisar semanalmente dependencias de Maven y GitHub Actions, crea PRs automaticos cuando hay versiones nuevas.
-- **SonarCloud:** analiza el codigo en cada push a `main`. Busca vulnerabilidades, bugs, code smells y duplicacion. Configurado con `sonar.organization=cafesincuchara` en el `pom.xml`.
-- **Bloqueo por seguridad:** el pipeline es secuencial con `needs`. Si SonarCloud encuentra un problema grave (quality gate fallado), el job `sonar` falla y no se ejecutan `docker` ni `deploy`. Asi aseguramos que codigo con problemas no llegue a produccion.
+### Auto-refresh dashboard
+![Auto-refresh dashboard](docs/assets/auto-refresh-dashboard.png)
 
----
+### EC2 instancia
+![EC2 instancia](docs/assets/ec2-instance.png)
 
-## IE4 - Despliegue automatico y trazabilidad
+### ECR imagenes
+![ECR imagenes](docs/assets/ecr-images.png)
 
-El despliegue se hace automaticamente contra **Render** usando su API REST. Cuando los 3 jobs anteriores pasan, el job `deploy` envia un POST al endpoint de deploys con el token de API (guardado en GitHub Secrets).
+### ALB + Target Group healthy
+![ALB + TG healthy](docs/assets/alb-tg-healthy.png)
 
-**Trazabilidad:**
-- El pipeline usa `needs` entre todos los jobs, por lo que cada etapa queda registrada en GitHub Actions.
-- La imagen Docker se etiqueta con `${{ github.sha }}` para saber exactamente que commit genero cada deploy.
-- El servicio vive en `https://productosapi-eta0.onrender.com`.
+### Dashboard completo
+![Dashboard completo](docs/assets/dashboard-complete.png)
 
----
+### Alarmas CloudWatch
+![Alarmas CloudWatch](docs/assets/cloudwatch-alarms.png)
 
-## IE5 - Orquestacion (Docker Compose)
+### Logs en CloudWatch
+![Logs CloudWatch](docs/assets/cloudwatch-logs.png)
 
-Configuramos `docker-compose.yml` con:
+### GitHub Secrets
+![GitHub Secrets](docs/assets/github-secrets.png)
 
-- **2 replicas** del servicio para tolerancia a fallos y balanceo de carga basico.
-- **Limites de recursos:** cada contenedor tiene un maximo de 0.50 CPUs y 512MB de RAM, con reservas de 0.25 CPUs y 256MB.
-- **Politica de reinicio:** `on-failure` para que si un contenedor se cae inesperadamente se levante solo.
-- Variables de entorno manejadas con `env_file: .env`.
-
-```bash
-# Para levantar localmente
-docker compose up -d
-```
+### curl ALB response
+![curl ALB response](docs/assets/curl-alb-response.png)
 
 ---
 
 ## Declaracion de uso de IA
 
-Durante el trabajo usamos Gemini como apoyo tecnico para:
-- Entender la sintaxis de limites de memoria y CPU en docker-compose.yml.
-- Conectar los jobs en GitHub Actions con `needs` para asegurar la trazabilidad.
-- Estructurar y mejorar la redaccion de este README.
+Durante el trabajo usamos herramientas de IA como apoyo tecnico para:
+- Generar y depurar scripts de automatizacion (AWS CLI, CloudWatch, SSM)
+- Configurar metricas y alarmas de CloudWatch
+- Estructurar workflows de GitHub Actions
+- Optimizar consultas y comandos de AWS
 
 ---
 
@@ -122,29 +113,6 @@ reglas que definimos, y la escabilidad, que en pocas palabras gracias al compose
 como manejar esos recursos sin asfixiarse por la reparticion del trafico en el compose
 
 **Vicente Herrera**
+
 Utilice la IA en gran medida para perfeccionar y automatizar los procesos de creacion de alarmas, grupos, subnets etc,
 Siempre estoy teniendo en criterio de error sobre lo que se esta realizando en el proyecto.
-
-
-1	Auto-refresh dashboard	CloudWatch → Dashboard → Actions → Auto-refresh → 1 minuto
-    ![alt text](image.png)
-2	Captura EC2 instancia	EC2 Console → Instances → pantallazo
-    ![alt text](image-2.png)
-3	Captura ECR imágenes	ECR → repositorio productosapi → pantallazo
-    ![alt text](image-3.png)
-4	Captura ALB + TG healthy	EC2 → Target Groups → productosapi-tg → pantallazo
-    ![alt text](image-4.png)
-5	Captura Dashboard completo	CloudWatch → Dashboards → ProductosAPI-EP3 → pantallazo
-    ![alt text](image-5.png)
-6	Captura Alarmas OK	CloudWatch → Alarms → pantallazo
-    ![alt text](image-6.png)
-7	Captura Logs en CloudWatch	CloudWatch → Log groups → /productosapi/microservice → abrir un stream → pantallazo
-    ![alt text](image-7.png)
-8	Captura GitHub Secrets	Repo → Settings → Secrets → pantallazo
-    ![alt text](image-8.png)
-9	Captura curl ALB response	Terminal: curl http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/actuator/health y capturas
-    ![alt text](image-9.png)
-
-
-
-

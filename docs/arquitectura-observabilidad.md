@@ -23,6 +23,13 @@
       [CloudWatch Logs]      [CloudWatch Metrics]
 ```
 
+## Evidencias
+
+![EC2 instancia](assets/ec2-instance.png)
+![ECR imagenes](assets/ecr-images.png)
+![ALB + TG healthy](assets/alb-tg-healthy.png)
+![curl ALB response](assets/curl-alb-response.png)
+
 ## Herramientas
 
 | Herramienta | Para que sirve |

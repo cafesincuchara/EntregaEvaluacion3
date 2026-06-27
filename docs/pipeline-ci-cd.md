@@ -25,6 +25,12 @@ Push -> [Validate] -> [Build] -> [Deploy] -> Produccion
 - Esperar que el servicio estabilice
 - Verificar health endpoint
 
+## Evidencias
+
+![Dashboard completo](assets/dashboard-complete.png)
+![Auto-refresh dashboard](assets/auto-refresh-dashboard.png)
+![GitHub Secrets](assets/github-secrets.png)
+
 ## Seguridad
 - Nadie hace push directo a `main` (branch protection)
 - Las credenciales AWS estan en GitHub Secrets

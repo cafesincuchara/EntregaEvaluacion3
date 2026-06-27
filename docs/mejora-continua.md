@@ -18,6 +18,11 @@ El dashboard de CloudWatch muestra en tiempo real CPU, memoria, errores, cobertu
 | Error rate > 3% | Rollback y debug |
 | CPU > 70% sostenido | Ajustar auto-scaling |
 
+## Evidencias
+
+![CloudWatch alarms](assets/cloudwatch-alarms.png)
+![CloudWatch logs](assets/cloudwatch-logs.png)
+
 ### 4. Mejorar
 - Cada sprint revisar dashboards y ajustar thresholds
 - Agregar nuevas validaciones segun incidentes
