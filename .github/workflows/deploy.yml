@@ -155,7 +155,7 @@ jobs:
               --log-driver awslogs \
               --log-opt awslogs-group=/productosapi/microservice \
               --log-opt awslogs-region=${{ env.AWS_REGION }} \
-              --log-opt awslogs-stream-prefix=ec2-productosapi \
+
               -e SERVER_PORT=8080 \
               -e AWS_REGION=${{ env.AWS_REGION }} \
               ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
