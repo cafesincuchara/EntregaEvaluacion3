@@ -122,8 +122,29 @@ reglas que definimos, y la escabilidad, que en pocas palabras gracias al compose
 como manejar esos recursos sin asfixiarse por la reparticion del trafico en el compose
 
 **Vicente Herrera**
-La IA siempre servira para poder ayudar en los trabajos que nos toma tiempo organizar y llevar acabo, 
-es nuestro deber como estudiantes el saber como usarla para aprender mas de lo sabemos. Durante el proyecto 
-aprendi de mejor manera el uso de API keys y su gran manejo para poder usar paginas como sonar, render etc. 
-Tener tantos servicios puede ser cansador pero con GitHub Action siempre se mejora la productividad de los jobs que puede repetir y 
-lanzar.
+Utilice la IA en gran medida para perfeccionar y automatizar los procesos de creacion de alarmas, grupos, subnets etc,
+Siempre estoy teniendo en criterio de error sobre lo que se esta realizando en el proyecto.
+
+
+1	Auto-refresh dashboard	CloudWatch → Dashboard → Actions → Auto-refresh → 1 minuto
+    ![alt text](image.png)
+2	Captura EC2 instancia	EC2 Console → Instances → pantallazo
+    ![alt text](image-2.png)
+3	Captura ECR imágenes	ECR → repositorio productosapi → pantallazo
+    ![alt text](image-3.png)
+4	Captura ALB + TG healthy	EC2 → Target Groups → productosapi-tg → pantallazo
+    ![alt text](image-4.png)
+5	Captura Dashboard completo	CloudWatch → Dashboards → ProductosAPI-EP3 → pantallazo
+    ![alt text](image-5.png)
+6	Captura Alarmas OK	CloudWatch → Alarms → pantallazo
+    ![alt text](image-6.png)
+7	Captura Logs en CloudWatch	CloudWatch → Log groups → /productosapi/microservice → abrir un stream → pantallazo
+    ![alt text](image-7.png)
+8	Captura GitHub Secrets	Repo → Settings → Secrets → pantallazo
+    ![alt text](image-8.png)
+9	Captura curl ALB response	Terminal: curl http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/actuator/health y capturas
+    ![alt text](image-9.png)
+
+
+
+
