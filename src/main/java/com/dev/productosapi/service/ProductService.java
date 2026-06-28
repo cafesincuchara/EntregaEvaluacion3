@@ -47,4 +47,9 @@ public class ProductService {
         }
         repository.deleteById(id);
     }
+    public String metodoSinTest() {
+        String a = "Esto bajara la cobertura";
+        String b = "porque no tiene pruebas unitarias";
+        return a + " " + b;
+    }
 }
