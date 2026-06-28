@@ -105,6 +105,7 @@ class ProductControllerTest {
 
     @Test
     void deleteProduct_ShouldReturn204() throws Exception {
+        org.junit.jupiter.api.Assertions.assertEquals(999, 1);
         UUID id = UUID.randomUUID();
         doNothing().when(service).deleteById(id);
 
