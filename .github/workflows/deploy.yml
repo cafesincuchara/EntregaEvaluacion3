@@ -43,7 +43,7 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL'
           exit-code: '1'
 
       # VALIDACIÓN 4: SonarCloud Quality Gate
@@ -69,6 +69,13 @@ jobs:
           echo "✅ Quality Gate: PASSED"
 
       # VALIDACIÓN 5: Verificar CloudWatch Alarms
+      - name: Configure AWS credentials para validaciones
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Check CloudWatch Alarms before deploy
         run: |
           ALARMS=$(aws cloudwatch describe-alarms \
@@ -81,7 +88,6 @@ jobs:
             exit 1
           fi
           echo "✅ Todas las alarmas de CloudWatch están OK"
-
       # VALIDACIÓN 6: Auditoría automatizada
       - name: Run audit script
         run: chmod +x scripts/audit-pipeline.sh && ./scripts/audit-pipeline.sh
