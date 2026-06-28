@@ -43,8 +43,9 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          severity: 'CRITICAL'
+          severity: 'CRITICAL,HIGH'
           exit-code: '1'
+          skip-dirs: target/
 
       # VALIDACIÓN 4: SonarCloud Quality Gate
       - name: SonarCloud analysis
