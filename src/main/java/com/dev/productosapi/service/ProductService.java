@@ -47,4 +47,165 @@ public class ProductService {
         }
         repository.deleteById(id);
     }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
+    public void metodoConMuchosCodeSmells() {
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        System.out.println("Esto es un code smell grave porque repite lo mismo");
+        // Sigue pegando la misma línea muchas veces hacia abajo...
+    }
 }
