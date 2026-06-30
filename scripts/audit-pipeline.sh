@@ -51,7 +51,7 @@ echo "✅ Licencias verificadas"
 
 echo ""
 echo "[6/6] Verificando buenas prácticas..."
-TODOS=$(grep -r "TODO\|FIXME\|HACK\|XXX" src/main --include="*.java" | wc -l)
+TODOS=$(grep -r "TODO\|FIXME\|HACK\|XXX" src/main --include="*.java" 2>/dev/null | wc -l || true)
 if [ "$TODOS" -gt 5 ]; then
     echo "⚠️  $TODOS marcadores TODO/FIXME en producción"
 fi
