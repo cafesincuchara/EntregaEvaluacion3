@@ -48,18 +48,22 @@ jobs:
 
       # VALIDACIÓN 4: SonarCloud Quality Gate
       - name: SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           mvn verify sonar:sonar \
             -Dsonar.projectKey=ep3-productos_EntregaEvaluacion32 \
             -Dsonar.organization=ep3-productoss \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.login=${SONAR_TOKEN} \
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
       - name: Check Quality Gate status
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           sleep 15
-          STATUS=$(curl -s -u ${{ secrets.SONAR_TOKEN }}: \
+          STATUS=$(curl -s -u ${SONAR_TOKEN}: \
             "https://sonarcloud.io/api/qualitygates/project_status?projectKey=ep3-productos_EntregaEvaluacion32" \
             | jq -r '.projectStatus.status')
           if [ "$STATUS" != "OK" ]; then

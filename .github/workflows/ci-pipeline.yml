@@ -39,9 +39,10 @@ jobs:
           distribution: 'temurin'
           cache: maven
       - name: SonarCloud analysis
-        run: mvn verify sonar:sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }} -Dsonar.projectKey=ep3-productos_EntregaEvaluacion32
         env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mvn verify sonar:sonar -Dsonar.token=${SONAR_TOKEN} -Dsonar.projectKey=ep3-productos_EntregaEvaluacion32
 
   build-and-push:
     needs: sonar
