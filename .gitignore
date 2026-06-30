@@ -34,3 +34,11 @@ build/
 
 ### Env ###
 .env
+
+### Node ###
+node_modules/
+
+### Agent config ###
+AGENTS.md
+CONTEXT.md
+opencode.json

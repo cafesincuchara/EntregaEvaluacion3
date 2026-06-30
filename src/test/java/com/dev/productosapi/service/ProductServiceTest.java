@@ -114,7 +114,8 @@ class ProductServiceTest {
         UUID id = UUID.randomUUID();
         when(repository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> service.updateProduct(id, new Product()));
+        Product product = new Product();
+        assertThrows(RuntimeException.class, () -> service.updateProduct(id, product));
         verify(repository, times(1)).findById(id);
         verify(repository, never()).save(any());
     }

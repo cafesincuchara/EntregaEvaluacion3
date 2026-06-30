@@ -1,30 +1,31 @@
 package com.dev.productosapi.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import lombok.Getter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
+
 import java.util.UUID;
 
-@Entity
-@Getter @Setter
-@Table(name= "products")
+@Data
 @NoArgsConstructor
-public class Product {
-
-    @Id
-    @NotNull(message = "El ID no puede ser nulo")
-    private UUID id;
+@AllArgsConstructor
+public class ProductRequest {
 
     @NotBlank(message = "El nombre del producto no puede estar vacío")
     private String name;
 
-    @NotNull(message = "El precio es obligatorio y no puede ser nulo")
+    @NotNull(message = "El precio es obligatorio")
     @Positive(message = "El precio debe ser mayor a cero")
     private Double price;
+
+    public Product toEntity() {
+        Product product = new Product();
+        product.setId(UUID.randomUUID());
+        product.setName(this.name);
+        product.setPrice(this.price);
+        return product;
+    }
 }

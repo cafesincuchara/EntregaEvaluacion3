@@ -1,10 +1,10 @@
 package com.dev.productosapi.controller;
 
 import com.dev.productosapi.model.Product;
+import com.dev.productosapi.model.ProductRequest;
 import com.dev.productosapi.service.ProductService;
 import io.micrometer.core.instrument.Counter;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,15 +17,13 @@ import java.util.UUID;
 public class ProductController {
 
     private final ProductService service;
+    private final Counter requestCounter;
+    private final Counter productCreatedCounter;
 
-    @Autowired(required = false)
-    private Counter requestCounter;
-
-    @Autowired(required = false)
-    private Counter productCreatedCounter;
-
-    public ProductController(ProductService service) {
+    public ProductController(ProductService service, Counter requestCounter, Counter productCreatedCounter) {
         this.service = service;
+        this.requestCounter = requestCounter;
+        this.productCreatedCounter = productCreatedCounter;
     }
 
     @GetMapping
@@ -41,16 +39,16 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<Product> createProduct(@Valid @RequestBody Product product) {
+    public ResponseEntity<Product> createProduct(@Valid @RequestBody ProductRequest request) {
         if (requestCounter != null) requestCounter.increment();
         if (productCreatedCounter != null) productCreatedCounter.increment();
-        return new ResponseEntity<>(service.saveProduct(product), HttpStatus.CREATED);
+        return new ResponseEntity<>(service.saveProduct(request.toEntity()), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable UUID id, @Valid @RequestBody Product product) {
+    public ResponseEntity<Product> updateProduct(@PathVariable UUID id, @Valid @RequestBody ProductRequest request) {
         if (requestCounter != null) requestCounter.increment();
-        return ResponseEntity.ok(service.updateProduct(id, product));
+        return ResponseEntity.ok(service.updateProduct(id, request.toEntity()));
     }
 
     @DeleteMapping("/{id}")

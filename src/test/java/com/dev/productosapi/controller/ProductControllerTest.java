@@ -2,6 +2,7 @@ package com.dev.productosapi.controller;
 
 import com.dev.productosapi.model.Product;
 import com.dev.productosapi.service.ProductService;
+import io.micrometer.core.instrument.Counter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -26,6 +27,15 @@ class ProductControllerTest {
 
     @MockitoBean
     private ProductService service;
+
+    @MockitoBean
+    private Counter requestCounter;
+
+    @MockitoBean
+    private Counter productCreatedCounter;
+
+    @MockitoBean
+    private Counter errorCounter;
 
     @Autowired
     private ObjectMapper objectMapper;
