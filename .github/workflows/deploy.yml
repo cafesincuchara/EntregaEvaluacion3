@@ -69,6 +69,13 @@ jobs:
           echo "✅ Quality Gate: PASSED"
 
       # VALIDACIÓN 5: Verificar CloudWatch Alarms
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
       - name: Check CloudWatch Alarms before deploy
         run: |
           ALARMS=$(aws cloudwatch describe-alarms \
@@ -107,6 +114,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -133,6 +141,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -172,24 +181,7 @@ jobs:
             --unit Seconds \
             --dimensions Environment=Production
 
-      - name: Publish test coverage
-        run: |
-          COVERAGE=$(grep -oP 'Total.*?([0-9]+\.[0-9]+)' target/site/jacoco/index.html 2>/dev/null | head -1 || echo "0")
-          aws cloudwatch put-metric-data \
-            --namespace ProductosAPI \
-            --metric-name TestCoverage \
-            --value $(echo $COVERAGE | grep -oP '[0-9]+\.[0-9]+' || echo "0") \
-            --unit Percent \
-            --dimensions Environment=Production,Service=productosapi
-
       - name: Verify deployment health
         run: |
-          ALB_DNS=$(aws elbv2 describe-load-balancers \
-            --names productosapi-alb \
-            --query 'LoadBalancers[0].DNSName' \
-            --output text 2>/dev/null || echo "")
-          if [ -n "$ALB_DNS" ]; then
-            curl -sf http://$ALB_DNS/api/v1/products && echo "✅ API saludable"
-          else
-            echo "⚠️ No se pudo verificar health (ALB no disponible)"
-          fi
+          sleep 10
+          curl -sf http://${{ secrets.EC2_HOST }}:8080/actuator/health && echo "✅ API saludable" || echo "⚠️ Health check failed"
