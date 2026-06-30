@@ -39,7 +39,7 @@ jobs:
           distribution: 'temurin'
           cache: maven
       - name: SonarCloud analysis
-        run: mvn verify sonar:sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }} -Dsonar.projectKey=productosapi
+        run: mvn verify sonar:sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }} -Dsonar.projectKey=bra7ang
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
