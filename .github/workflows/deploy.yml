@@ -50,8 +50,8 @@ jobs:
       - name: SonarCloud analysis
         run: |
           mvn verify sonar:sonar \
-            -Dsonar.projectKey=cafesincuchara_EntregaEvaluacion3 \
-            -Dsonar.organization=cafesincuchara \
+            -Dsonar.projectKey=EntregaEvaluacion3 \
+            -Dsonar.organization=Seguridad-Codigo \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
@@ -60,7 +60,7 @@ jobs:
         run: |
           sleep 15
           STATUS=$(curl -s -u ${{ secrets.SONAR_TOKEN }}: \
-            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=cafesincuchara_EntregaEvaluacion3" \
+            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=EntregaEvaluacion3" \
             | jq -r '.projectStatus.status')
           if [ "$STATUS" != "OK" ]; then
             echo "❌ Quality Gate: $STATUS"
