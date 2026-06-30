@@ -187,5 +187,5 @@ jobs:
 
       - name: Verify deployment health
         run: |
-          sleep 10
-          curl -sf http://${{ secrets.EC2_HOST }}:8080/actuator/health && echo "✅ API saludable" || echo "⚠️ Health check failed"
+          sleep 15
+          curl -sf "http://${{ secrets.EC2_HOST }}/actuator/health" && echo "✅ API saludable" || (echo "❌ Health check failed" && exit 1)

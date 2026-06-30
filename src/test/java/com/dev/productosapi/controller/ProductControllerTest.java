@@ -45,6 +45,8 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$[0].name").value("Laptop"));
     }
 
+    
+
     @Test
     void getProductById_WhenExists_ShouldReturnProduct() throws Exception {
         UUID id = UUID.randomUUID();
@@ -86,6 +88,8 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.name").value("Teclado"));
     }
 
+
+    
     @Test
     void updateProduct_ShouldReturnUpdatedProduct() throws Exception {
         UUID id = UUID.randomUUID();
