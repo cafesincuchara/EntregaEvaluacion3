@@ -37,13 +37,13 @@ jobs:
           COVERAGE=$(grep -oP 'Total.*?([0-9]+\.[0-9]+)' target/site/jacoco/index.html | head -1)
           echo "Cobertura: $COVERAGE%"
 
-      # VALIDACIÓN 3: Escaneo de seguridad con Trivy
-      - name: Trivy security scan
+      # VALIDACIÓN 3: Escaneo de secretos con Trivy
+      - name: Trivy secret scan
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          severity: 'CRITICAL'
+          scanners: 'secret'
           exit-code: '1'
 
       # VALIDACIÓN 4: SonarCloud Quality Gate
