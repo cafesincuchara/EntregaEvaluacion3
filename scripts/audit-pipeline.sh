@@ -8,11 +8,12 @@ echo "╚═══════════════════════�
 FAILURES=0
 
 echo ""
-echo "[1/6] Verificando dependencias vulnerables..."
-mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 -q 2>/dev/null || {
-    echo "❌ Dependencias con CVSS >= 7 encontradas"
-    FAILURES=$((FAILURES + 1))
-}
+echo "[1/6] Verificando dependencias vulnerables... (skip - OWASP lento)"
+# mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 -q 2>/dev/null || {
+#     echo "❌ Dependencias con CVSS >= 7 encontradas"
+#     FAILURES=$((FAILURES + 1))
+# }
+echo "⏩ OWASP dependency-check omitido (Trivy cubre esto)"
 
 echo ""
 echo "[2/6] Verificando calidad de código..."
