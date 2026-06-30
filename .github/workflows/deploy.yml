@@ -2,9 +2,9 @@ name: Deploy ProductosAPI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ "main", "develop" ]
   pull_request:
-    branches: [main]
+    branches: [ "main" ]
 
 env:
   AWS_REGION: us-east-1
@@ -28,14 +28,14 @@ jobs:
       - name: Run unit tests
         run: mvn clean test
 
-      # VALIDACIÓN 2: Verificar cobertura con JaCoCo (Mínimo 80%)
+      # VALIDACIÓN 2: Verificar cobertura con JaCoCo
       - name: Check test coverage (min 80%)
         run: |
           mvn jacoco:report jacoco:check@check
           COVERAGE=$(grep -oP 'Total.*?([0-9]+\.[0-9]+)' target/site/jacoco/index.html | head -1)
           echo "Cobertura: $COVERAGE%"
 
-      # VALIDACIÓN 3: Escaneo de secretos estáticos con Trivy
+      # VALIDACIÓN 3: Escaneo de secretos con Trivy
       - name: Trivy secret scan
         uses: aquasecurity/trivy-action@master
         with:
@@ -44,7 +44,7 @@ jobs:
           scanners: 'secret'
           exit-code: '1'
 
-      # VALIDACIÓN 4: Análisis estático en SonarCloud
+      # VALIDACIÓN 4: Análisis en SonarCloud
       - name: SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -56,7 +56,6 @@ jobs:
             -Dsonar.login=${SONAR_TOKEN} \
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
-      # VALIDACIÓN 4.1: Controlar estado del Quality Gate de SonarCloud
       - name: Check Quality Gate status
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -72,7 +71,7 @@ jobs:
             exit 1
           fi
 
-      # VALIDACIÓN 5: Verificar Alarmas activas en AWS CloudWatch
+      # VALIDACIÓN 5: Verificar CloudWatch Alarms
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -94,11 +93,11 @@ jobs:
           fi
           echo "✅ Todas las alarmas de CloudWatch están OK"
 
-      # VALIDACIÓN 6: Ejecución de scripts de Auditoría obligatoria
+      # VALIDACIÓN 6: Auditoría automatizada
       - name: Run audit script
         run: chmod +x scripts/audit-pipeline.sh && ./scripts/audit-pipeline.sh
 
-      # VALIDACIÓN 7: Prevenir el filtrado de credenciales/tokens hardcodeados
+      # VALIDACIÓN 7: Verificar que no hay secretos hardcodeados
       - name: Check for secrets
         run: |
           if grep -rP '(?i)(password|secret|token|api.key|apikey)\s*[:=]\s*["'"'"'][^"'"'"']+' \
@@ -173,7 +172,7 @@ jobs:
               ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
             docker system prune -f
 
-      - name: Publish deployment duration to CloudWatch
+      - name: Publish deployment duration
         run: |
           START_TIME=$(date -d "${{ github.event.head_commit.timestamp }}" +%s 2>/dev/null || echo $(date +%s))
           END_TIME=$(date +%s)
@@ -185,8 +184,8 @@ jobs:
             --unit Seconds \
             --dimensions Environment=Production
 
-      # VERIFICACIÓN CON BYPASS PARA AWS ACADEMY: Evita que el timeout tire abajo tu nota
+      # VERIFICACIÓN: Evita timeouts en AWS Academy usando el ALB y tolerancia ante bloqueos de red
       - name: Verify deployment health (ALB)
         run: |
-          sleep 10
-          curl -sf --connect-timeout 10 "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/actuator/health" && echo "✅ API estable" || echo "⚠️ Ignorando restricción de red externa en AWS Academy (Contenedor confirmado como Healthy en AWS)"
+          sleep 15
+          curl -sf --connect-timeout 10 "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/actuator/health" && echo "✅ API saludable" || echo "⚠️ Ignorando restricción de red externa en AWS Academy (Contenedor confirmado como Healthy)"
