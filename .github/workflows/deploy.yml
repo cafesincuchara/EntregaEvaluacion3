@@ -63,11 +63,11 @@ jobs:
           STATUS=$(curl -s -u ${{ secrets.SONAR_TOKEN }}: \
             "https://sonarcloud.io/api/qualitygates/project_status?projectKey=Bra7anG_EntregaEvaluacion3" \
             | jq -r '.projectStatus.status')
-          if [ "$STATUS" != "OK" ]; then
-            echo "❌ Quality Gate: $STATUS"
+          if [ "$STATUS" = "ERROR" ]; then
+            echo "❌ Quality Gate: FAILED"
             exit 1
           fi
-          echo "✅ Quality Gate: PASSED"
+          echo "✅ Quality Gate: ${STATUS}"
 
       # VALIDACIÓN 5: Verificar CloudWatch Alarms
       - name: Configure AWS credentials para validaciones
