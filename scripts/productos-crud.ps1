@@ -8,23 +8,16 @@ param(
 $BaseUrl = "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products"
 
 function Show-Usage {
-  @"
+  @'
 Uso: .\scripts\productos-crud.ps1 <comando> [args]
 
 Comandos:
   list                     GET todos los productos
-  get <id>                 GET producto por UUID (ej: get -Id "uuid")
+  get <id>                 GET producto por UUID
   create <name> <price>    POST nuevo producto (abre bloc de notas)
-  update <id>              PUT actualizar producto (ej: update -Id "uuid")
-  delete <id>              DELETE producto (ej: delete -Id "uuid")
-
-Ejemplos:
-  .\scripts\productos-crud.ps1 list
-  .\scripts\productos-crud.ps1 get -Id 550e8400-e29b-41d4-a716-446655440000
-  .\scripts\productos-crud.ps1 create "Laptop Gamer" 1500.00
-  .\scripts\productos-crud.ps1 update -Id 550e8400-e29b-41d4-a716-446655440000
-  .\scripts\productos-crud.ps1 delete -Id 550e8400-e29b-41d4-a716-446655440000
-"@
+  update <id>              PUT actualizar producto (abre bloc de notas)
+  delete <id>              DELETE producto
+'@
 }
 
 function Write-Response($r) {
@@ -36,19 +29,37 @@ function Write-Response($r) {
 }
 
 function Write-ErrorBody($ex) {
-  Write-Host "Error: $($ex.Message)" -ForegroundColor Red
   try {
-    if ($ex.Exception -and $ex.Exception.Response) {
-      if ($ex.Exception.Response -is [System.Net.Http.HttpResponseMessage]) {
-        $body = $ex.Exception.Response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-        if ($body) { Write-Host "Respuesta del servidor: $body" -ForegroundColor Yellow }
-      } else {
-        $reader = [System.IO.StreamReader]::new($ex.Exception.Response.GetResponseStream())
-        $body = $reader.ReadToEnd()
-        if ($body) { Write-Host "Respuesta del servidor: $body" -ForegroundColor Yellow }
+    # 1. Intentar capturar la respuesta HTTP cruda a través de la excepción de red
+    if ($ex.Exception.Response) {
+      $stream = $ex.Exception.Response.GetResponseStream()
+      $reader = [System.IO.StreamReader]::new($stream)
+      $body = $reader.ReadToEnd()
+      $reader.Close()
+      $stream.Close()
+      
+      if ($body) {
+        # Intenta formatearlo como JSON, si no, lo muestra como texto crudo
+        try {
+          $body | ConvertFrom-Json | ConvertTo-Json -Depth 10
+        } catch {
+          Write-Host "Respuesta cruda del servidor: $body" -ForegroundColor Yellow
+        }
+        return
       }
     }
-  } catch { }
+    
+    # 2. Si no hay stream de respuesta pero hay detalles en el registro de error de PowerShell
+    if ($ex.ErrorRecord.ErrorDetails.Message) {
+      Write-Host "Detalles: $($ex.ErrorRecord.ErrorDetails.Message)" -ForegroundColor Yellow
+    } else {
+      Write-Host "Error general: $($ex.Message)" -ForegroundColor Red
+    }
+  } catch {
+    # 3. Caso de emergencia extrema: Mostrar lo que sea que tenga la excepción
+    Write-Host "Excepción capturada: $($ex.Message)" -ForegroundColor Red
+    if ($ex.Exception) { Write-Host "Causa: $($ex.Exception.Message)" -ForegroundColor DarkRed }
+  }
 }
 
 function Invoke-List {
@@ -62,6 +73,7 @@ function Invoke-List {
 }
 
 function Invoke-Get {
+  if (-not $Id) { Write-Error "Falta parámetro -Id"; return }
   $url = "$BaseUrl/$Id"
   Write-Host "--- GET $url ---" -ForegroundColor Cyan
   try {
@@ -99,6 +111,7 @@ function Invoke-Create {
 }
 
 function Invoke-Update {
+  if (-not $Id) { Write-Error "Falta id"; return }
   $url = "$BaseUrl/$Id"
   Write-Host "Descargando producto actual..." -ForegroundColor Cyan
   try {
@@ -119,6 +132,7 @@ function Invoke-Update {
 }
 
 function Invoke-Delete {
+  if (-not $Id) { Write-Error "Falta id"; return }
   $url = "$BaseUrl/$Id"
   Write-Host "--- DELETE $url ---" -ForegroundColor Cyan
   try {
@@ -141,7 +155,7 @@ switch ($Command) {
   "list"   { Invoke-List }
   "get"    { Invoke-Get }
   "create" { if (-not $Name) { $Name = "Producto" }; Invoke-Create }
-  "update" { if (-not $Id) { Write-Error "Falta id"; return }; Invoke-Update }
-  "delete" { if (-not $Id) { Write-Error "Falta id"; return }; Invoke-Delete }
-  default { Show-Usage }
+  "update" { Invoke-Update }
+  "delete" { Invoke-Delete }
+  default  { Show-Usage }
 }
