@@ -24,7 +24,7 @@ mvn checkstyle:check pmd:check -q 2>/dev/null || {
 
 echo ""
 echo "[3/6] Verificando cobertura de pruebas (mín. 80%)..."
-mvn jacoco:check -q || {
+mvn jacoco:check@check -q || {
     echo "❌ Cobertura por debajo del 80%"
     FAILURES=$((FAILURES + 1))
 }
