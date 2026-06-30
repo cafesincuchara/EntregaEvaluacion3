@@ -24,20 +24,18 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # ===== VALIDACIONES QUE DETIENEN EL PIPELINE =====
-
       # VALIDACIÓN 1: Compilar y ejecutar tests
       - name: Run unit tests
         run: mvn clean test
 
-      # VALIDACIÓN 2: Verificar cobertura con JaCoCo
+      # VALIDACIÓN 2: Verificar cobertura con JaCoCo (Mínimo 80%)
       - name: Check test coverage (min 80%)
         run: |
           mvn jacoco:report jacoco:check@check
           COVERAGE=$(grep -oP 'Total.*?([0-9]+\.[0-9]+)' target/site/jacoco/index.html | head -1)
           echo "Cobertura: $COVERAGE%"
 
-      # VALIDACIÓN 3: Escaneo de secretos con Trivy
+      # VALIDACIÓN 3: Escaneo de secretos estáticos con Trivy
       - name: Trivy secret scan
         uses: aquasecurity/trivy-action@master
         with:
@@ -46,7 +44,7 @@ jobs:
           scanners: 'secret'
           exit-code: '1'
 
-      # VALIDACIÓN 4: SonarCloud Quality Gate
+      # VALIDACIÓN 4: Análisis estático en SonarCloud
       - name: SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -58,6 +56,7 @@ jobs:
             -Dsonar.login=${SONAR_TOKEN} \
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
+      # VALIDACIÓN 4.1: Controlar estado del Quality Gate de SonarCloud
       - name: Check Quality Gate status
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -73,7 +72,7 @@ jobs:
             exit 1
           fi
 
-      # VALIDACIÓN 5: Verificar CloudWatch Alarms
+      # VALIDACIÓN 5: Verificar Alarmas activas en AWS CloudWatch
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -81,6 +80,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
+
       - name: Check CloudWatch Alarms before deploy
         run: |
           ALARMS=$(aws cloudwatch describe-alarms \
@@ -94,11 +94,11 @@ jobs:
           fi
           echo "✅ Todas las alarmas de CloudWatch están OK"
 
-      # VALIDACIÓN 6: Auditoría automatizada
+      # VALIDACIÓN 6: Ejecución de scripts de Auditoría obligatoria
       - name: Run audit script
         run: chmod +x scripts/audit-pipeline.sh && ./scripts/audit-pipeline.sh
 
-      # VALIDACIÓN 7: Verificar que no hay secretos hardcodeados
+      # VALIDACIÓN 7: Prevenir el filtrado de credenciales/tokens hardcodeados
       - name: Check for secrets
         run: |
           if grep -rP '(?i)(password|secret|token|api.key|apikey)\s*[:=]\s*["'"'"'][^"'"'"']+' \
@@ -135,7 +135,6 @@ jobs:
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
   deploy:
     needs: build
@@ -172,8 +171,9 @@ jobs:
               -e SERVER_PORT=8080 \
               -e AWS_REGION=${{ env.AWS_REGION }} \
               ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+            docker system prune -f
 
-      - name: Publish deployment duration
+      - name: Publish deployment duration to CloudWatch
         run: |
           START_TIME=$(date -d "${{ github.event.head_commit.timestamp }}" +%s 2>/dev/null || echo $(date +%s))
           END_TIME=$(date +%s)
@@ -185,7 +185,8 @@ jobs:
             --unit Seconds \
             --dimensions Environment=Production
 
-      - name: Verify deployment health
+      # VERIFICACIÓN: Apuntar directo al Balanceador de Carga para evitar fallos por cambio de IP de la EC2
+      - name: Verify deployment health (ALB)
         run: |
-          sleep 10
-          curl -sf http://${{ secrets.EC2_HOST }}:8080/actuator/health && echo "✅ API saludable" || echo "⚠️ Health check failed"
+          sleep 15
+          curl -sf "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/actuator/health" && echo "✅ API estable y saludable en Producción" || (echo "❌ Health check falló en el Balanceador" && exit 1)
