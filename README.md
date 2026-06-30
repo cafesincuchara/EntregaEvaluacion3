@@ -86,6 +86,20 @@ Cada job depende del anterior mediante `needs`. Si algo falla, no se sigue adela
 
 ### curl ALB response
 ![curl ALB response](docs/assets/curl-alb-response.png)
+### Falla 1 - Trivy/Seguridad
+<img width="1261" height="838" alt="WhatsApp Image 2026-06-28 at 13 04 53" src="https://github.com/user-attachments/assets/e88b3d31-1e0c-4e04-84ac-fe2ff0fc211a" />
+<img width="1600" height="682" alt="WhatsApp Image 2026-06-28 at 13 04 54" src="https://github.com/user-attachments/assets/fbb1bd4e-bb68-47a5-882a-f7cd0ff68113" />
+### Falla 2 — Calidad (Test Rojo)
+<img width="1150" height="676" alt="image" src="https://github.com/user-attachments/assets/ffaed92c-af30-4e72-a536-5873a307ecc2" />
+<img width="1254" height="717" alt="image" src="https://github.com/user-attachments/assets/2211e501-ccd4-4771-82a4-90609794d9b9" />
+## Falla 3 — Cobertura baja (JaCoCo)
+<img width="1054" height="570" alt="image" src="https://github.com/user-attachments/assets/f39d2387-1169-4fa5-93c4-7ec19b15d317" />
+<img width="1486" height="427" alt="image" src="https://github.com/user-attachments/assets/3e3dbdaf-95c5-41bb-958d-4d859c2466c1" />
+## Falla 4 — Quality Gate (SonarCloud)
+<img width="1097" height="518" alt="image" src="https://github.com/user-attachments/assets/bd15ffac-688f-42f0-8ce2-2adb5defdead" />
+<img width="1162" height="628" alt="image" src="https://github.com/user-attachments/assets/b6e6b327-917c-4df3-a5cd-d31a66098705" />
+<img width="1494" height="808" alt="image" src="https://github.com/user-attachments/assets/471c07b0-fe1d-4990-9fa7-c4b9bf045f28" />
+<img width="1503" height="583" alt="image" src="https://github.com/user-attachments/assets/3ba046fc-d663-449b-8bbe-e328966d7a9a" />
 
 ---
 
