@@ -23,7 +23,7 @@ jobs:
       - name: Run tests with coverage
         run: mvn clean verify jacoco:report
       - name: Check coverage (min 80%)
-        run: mvn jacoco:check
+        run: mvn jacoco:check@check
       - name: Checkstyle & PMD
         run: mvn checkstyle:check pmd:check
 

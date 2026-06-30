@@ -33,7 +33,7 @@ jobs:
       # VALIDACIÓN 2: Verificar cobertura con JaCoCo
       - name: Check test coverage (min 80%)
         run: |
-          mvn jacoco:report jacoco:check
+          mvn jacoco:report jacoco:check@check
           COVERAGE=$(grep -oP 'Total.*?([0-9]+\.[0-9]+)' target/site/jacoco/index.html | head -1)
           echo "Cobertura: $COVERAGE%"
 
