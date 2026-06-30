@@ -26,8 +26,8 @@
     </scm>
     <properties>
         <java.version>21</java.version>
-        <sonar.organization>bra7ang</sonar.organization>
-        <sonar.projectKey>bra7ang</sonar.projectKey>
+        <sonar.organization>cafesincuchara</sonar.organization>
+        <sonar.projectKey>cafesincuchara_EntregaEvaluacion3</sonar.projectKey>
     </properties>
     <dependencies>
         <dependency>

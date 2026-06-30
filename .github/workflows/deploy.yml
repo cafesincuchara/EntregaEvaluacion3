@@ -46,10 +46,27 @@ jobs:
           scanners: 'secret'
           exit-code: '1'
 
-      # VALIDACIÓN 4: SonarCloud Quality Gate (deshabilitado temporalmente)
-      # TODO: Re-habilitar cuando SONAR_TOKEN esté generado en org bra7ang
+      # VALIDACIÓN 4: SonarCloud Quality Gate
       - name: SonarCloud analysis
-        run: echo "⚠️ SonarCloud deshabilitado temporalmente"
+        run: |
+          mvn verify sonar:sonar \
+            -Dsonar.projectKey=cafesincuchara_EntregaEvaluacion3 \
+            -Dsonar.organization=cafesincuchara \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+
+      - name: Check Quality Gate status
+        run: |
+          sleep 15
+          STATUS=$(curl -s -u ${{ secrets.SONAR_TOKEN }}: \
+            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=cafesincuchara_EntregaEvaluacion3" \
+            | jq -r '.projectStatus.status')
+          if [ "$STATUS" != "OK" ]; then
+            echo "❌ Quality Gate: $STATUS"
+            exit 1
+          fi
+          echo "✅ Quality Gate: PASSED"
 
       # VALIDACIÓN 5: Verificar CloudWatch Alarms
       - name: Configure AWS credentials
