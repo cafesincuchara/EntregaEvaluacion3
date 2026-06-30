@@ -23,7 +23,7 @@ jobs:
       - name: Run tests with coverage
         run: mvn clean verify jacoco:report
       - name: Check coverage (min 80%)
-        run: mvn jacoco:check
+        run: mvn jacoco:check@check
       - name: Checkstyle & PMD
         run: mvn checkstyle:check pmd:check
 
@@ -39,9 +39,10 @@ jobs:
           distribution: 'temurin'
           cache: maven
       - name: SonarCloud analysis
-        run: mvn verify sonar:sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }} -Dsonar.projectKey=productosapi
         env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mvn verify sonar:sonar -Dsonar.token=${SONAR_TOKEN} -Dsonar.projectKey=ep3-productos_EntregaEvaluacion32
 
   build-and-push:
     needs: sonar
@@ -53,6 +54,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
       - name: Login to Amazon ECR
         id: login-ecr
@@ -75,6 +77,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1
@@ -93,7 +96,6 @@ jobs:
               --log-driver awslogs \
               --log-opt awslogs-group=/productosapi/microservice \
               --log-opt awslogs-region=${{ env.AWS_REGION }} \
-              --log-opt awslogs-stream-prefix=ec2-productosapi \
               -e SERVER_PORT=8080 \
               -e AWS_REGION=${{ env.AWS_REGION }} \
               ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest

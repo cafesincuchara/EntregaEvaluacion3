@@ -26,7 +26,8 @@
     </scm>
     <properties>
         <java.version>21</java.version>
-        <sonar.organization>cafesincuchara</sonar.organization>
+        <sonar.organization>ep3-productoss</sonar.organization>
+        <sonar.projectKey>ep3-productos_EntregaEvaluacion32</sonar.projectKey>
     </properties>
     <dependencies>
         <dependency>

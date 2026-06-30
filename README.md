@@ -116,3 +116,22 @@ como manejar esos recursos sin asfixiarse por la reparticion del trafico en el c
 
 Utilice la IA en gran medida para perfeccionar y automatizar los procesos de creacion de alarmas, grupos, subnets etc,
 Siempre estoy teniendo en criterio de error sobre lo que se esta realizando en el proyecto.
+
+
+Comandos:
+
+# VER todos
+.\scripts\productos-crud.ps1 list
+
+# VER uno por UUID
+.\scripts\productos-crud.ps1 get -Id id
+
+# CREAR (abre bloc de notas)
+.\scripts\productos-crud.ps1 create "Laptop Gamer" 1500.00
+.\scripts\productos-crud.ps1 create "Mouse" 45.99
+
+# ACTUALIZAR (abre bloc de notas con JSON actual)
+.\scripts\productos-crud.ps1 update -Id id
+
+# ELIMINAR
+.\scripts\productos-crud.ps1 delete -Id id
