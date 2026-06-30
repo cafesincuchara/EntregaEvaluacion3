@@ -24,7 +24,7 @@ public class Product {
     @NotBlank(message = "El nombre del producto no puede estar vacío")
     private String name;
 
-    @NotNull(message = "El precio es obligatorio")
+    @NotNull(message = "El precio es obligatorio y no puede ser nulo")
     @Positive(message = "El precio debe ser mayor a cero")
     private Double price;
 }
