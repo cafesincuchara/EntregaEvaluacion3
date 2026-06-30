@@ -52,9 +52,9 @@ jobs:
         run: |
           mvn verify sonar:sonar \
             -Dsonar.projectKey=Bra7anG_EntregaEvaluacion3 \
-            -Dsonar.organization=Bra7anG \
+            -Dsonar.organization=bra7ang \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
       - name: Check Quality Gate status
