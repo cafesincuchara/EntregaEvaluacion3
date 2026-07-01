@@ -89,6 +89,62 @@ Cada job depende del anterior mediante `needs`. Si algo falla, no se sigue adela
 
 ---
 
+## Uso de la API
+
+**Base URL:** `http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products`
+
+### GET — Listar todos los productos
+
+```powershell
+Invoke-RestMethod -Uri "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products"
+```
+
+### GET — Obtener producto por ID
+
+```powershell
+Invoke-RestMethod -Uri "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products/00000000-0000-0000-0000-000000000001"
+```
+
+### POST — Crear un producto
+
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products" `
+  -ContentType "application/json" `
+  -Body '{"id":"550e8400-e29b-41d4-a716-446655440000","name":"Laptop Gamer","price":1500.00}'
+```
+
+### PUT — Actualizar un producto
+
+```powershell
+Invoke-RestMethod -Method Put `
+  -Uri "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products/550e8400-e29b-41d4-a716-446655440000" `
+  -ContentType "application/json" `
+  -Body '{"name":"Laptop Gamer Pro","price":1800.00}'
+```
+
+### DELETE — Eliminar un producto
+
+```powershell
+Invoke-RestMethod -Method Delete `
+  -Uri "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products/550e8400-e29b-41d4-a716-446655440000"
+```
+
+### Formato del JSON (POST / PUT)
+
+```json
+{
+  "id":   "uuid",
+  "name": "Nombre del producto",
+  "price": 99.99
+}
+```
+
+> ⚠️ El `id` debe ser un UUID válido. El precio no puede ser negativo.
+> En POST el `id` es obligatorio. En PUT solo se envía `name` y `price`.
+
+---
+
 ## Declaracion de uso de IA
 
 Durante el trabajo usamos herramientas de IA como apoyo tecnico para:
@@ -117,21 +173,3 @@ como manejar esos recursos sin asfixiarse por la reparticion del trafico en el c
 Utilice la IA en gran medida para perfeccionar y automatizar los procesos de creacion de alarmas, grupos, subnets etc,
 Siempre estoy teniendo en criterio de error sobre lo que se esta realizando en el proyecto.
 
-
-Comandos:
-
-# VER todos
-.\scripts\productos-crud.ps1 list
-
-# VER uno por UUID
-.\scripts\productos-crud.ps1 get -Id id
-
-# CREAR (abre bloc de notas)
-.\scripts\productos-crud.ps1 create "Laptop Gamer" 1500.00
-.\scripts\productos-crud.ps1 create "Mouse" 45.99
-
-# ACTUALIZAR (abre bloc de notas con JSON actual)
-.\scripts\productos-crud.ps1 update -Id id
-
-# ELIMINAR
-.\scripts\productos-crud.ps1 delete -Id id
