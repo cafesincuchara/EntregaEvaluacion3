@@ -29,7 +29,7 @@ public class ProductService {
     @Transactional
     public Product saveProduct(Product product) {
         if (product.getPrice() != null && product.getPrice() < 0) {
-            throw new RuntimeException("No puedes registrar un producto con valores negativos o valores no permitidos dentro del rango 1-infinito");
+            throw new RuntimeException("No se admiten valores negativo para el precio");
         }
         return repository.save(product);
     }
@@ -37,7 +37,7 @@ public class ProductService {
     @Transactional
     public Product updateProduct(UUID id, Product productDetails) {
         if (productDetails.getPrice() != null && productDetails.getPrice() < 0) {
-            throw new RuntimeException("No puedes actualizar un producto con valores negativos ");
+            throw new RuntimeException("No puede ser valores negativo para actualizar un producto");
         }
         Product product = findById(id);
         product.setName(productDetails.getName());
