@@ -103,6 +103,7 @@ jobs:
       - name: Verify deployment
         run: |
           sleep 10
-          curl -sf http://${{ secrets.EC2_HOST }}:8080/actuator/health \
+          curl -sf --connect-timeout 10 --max-time 15 \
+            "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/actuator/health" \
             && echo "Health check passed" \
             || echo "Health check skipped (network restriction)"
