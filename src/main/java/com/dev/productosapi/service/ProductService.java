@@ -29,7 +29,7 @@ public class ProductService {
     @Transactional
     public Product saveProduct(Product product) {
         if (product.getPrice() != null && product.getPrice() < 0) {
-            throw new RuntimeException("El precio no puede ser menor a cero"); 
+            throw new RuntimeException("No puedes poner productos negativos a un precio");
         }
         return repository.save(product);
     }
@@ -37,7 +37,7 @@ public class ProductService {
     @Transactional
     public Product updateProduct(UUID id, Product productDetails) {
         if (productDetails.getPrice() != null && productDetails.getPrice() < 0) {
-            throw new RuntimeException("El precio no puede ser menor a cero cuando quieres actualizar el producto");
+            throw new RuntimeException("No puedes poner productos negativos a un precio");
         }
         Product product = findById(id);
         product.setName(productDetails.getName());

@@ -149,8 +149,7 @@ class ProductServiceTest {
         p.setPrice(-50.0);
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> service.saveProduct(p));
-        assertTrue(ex.getMessage().contains("ERROR"));
-        assertTrue(ex.getMessage().contains("-50.0"));
+        assertEquals("No puedes poner productos negativos a un precio", ex.getMessage());
         verify(repository, never()).save(any());
     }
 
@@ -162,8 +161,7 @@ class ProductServiceTest {
         details.setPrice(-10.0);
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> service.updateProduct(id, details));
-        assertTrue(ex.getMessage().contains("ERROR"));
-        assertTrue(ex.getMessage().contains("-10.0"));
+        assertEquals("No puedes poner productos negativos a un precio", ex.getMessage());
         verify(repository, never()).save(any());
         verify(repository, never()).findById(any());
     }
