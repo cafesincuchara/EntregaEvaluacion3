@@ -58,34 +58,59 @@ Cada job depende del anterior mediante `needs`. Si algo falla, no se sigue adela
 
 ---
 
-## Capturas de pantalla
+## Uso de la API
 
-### Auto-refresh dashboard
-![Auto-refresh dashboard](docs/assets/auto-refresh-dashboard.png)
+**Base URL:** `http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products`
 
-### EC2 instancia
-![EC2 instancia](docs/assets/ec2-instance.png)
+### GET — Listar todos los productos
 
-### ECR imagenes
-![ECR imagenes](docs/assets/ecr-images.png)
+```powershell
+Invoke-RestMethod -Uri "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products"
+```
 
-### ALB + Target Group healthy
-![ALB + TG healthy](docs/assets/alb-tg-healthy.png)
+### GET — Obtener producto por ID
 
-### Dashboard completo
-![Dashboard completo](docs/assets/dashboard-complete.png)
+```powershell
+Invoke-RestMethod -Uri "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products/00000000-0000-0000-0000-000000000001"
+```
 
-### Alarmas CloudWatch
-![Alarmas CloudWatch](docs/assets/cloudwatch-alarms.png)
+### POST — Crear un producto
 
-### Logs en CloudWatch
-![Logs CloudWatch](docs/assets/cloudwatch-logs.png)
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products" `
+  -ContentType "application/json" `
+  -Body '{"id":"550e8400-e29b-41d4-a716-446655440000","name":"Laptop Gamer","price":1500.00}'
+```
 
-### GitHub Secrets
-![GitHub Secrets](docs/assets/github-secrets.png)
+### PUT — Actualizar un producto
 
-### curl ALB response
-![curl ALB response](docs/assets/curl-alb-response.png)
+```powershell
+Invoke-RestMethod -Method Put `
+  -Uri "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products/550e8400-e29b-41d4-a716-446655440000" `
+  -ContentType "application/json" `
+  -Body '{"name":"Laptop Gamer Pro","price":1800.00}'
+```
+
+### DELETE — Eliminar un producto
+
+```powershell
+Invoke-RestMethod -Method Delete `
+  -Uri "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products/550e8400-e29b-41d4-a716-446655440000"
+```
+
+### Formato del JSON (POST / PUT)
+
+```json
+{
+  "id":   "uuid",
+  "name": "Nombre del producto",
+  "price": 99.99
+}
+```
+
+> ⚠️ El `id` debe ser un UUID válido. El precio no puede ser negativo.
+> En POST el `id` es obligatorio. En PUT solo se envía `name` y `price`.
 
 ---
 
@@ -117,21 +142,3 @@ como manejar esos recursos sin asfixiarse por la reparticion del trafico en el c
 Utilice la IA en gran medida para perfeccionar y automatizar los procesos de creacion de alarmas, grupos, subnets etc,
 Siempre estoy teniendo en criterio de error sobre lo que se esta realizando en el proyecto.
 
-
-Comandos:
-
-# VER todos
-.\scripts\productos-crud.ps1 list
-
-# VER uno por UUID
-.\scripts\productos-crud.ps1 get -Id id
-
-# CREAR (abre bloc de notas)
-.\scripts\productos-crud.ps1 create "Laptop Gamer" 1500.00
-.\scripts\productos-crud.ps1 create "Mouse" 45.99
-
-# ACTUALIZAR (abre bloc de notas con JSON actual)
-.\scripts\productos-crud.ps1 update -Id id
-
-# ELIMINAR
-.\scripts\productos-crud.ps1 delete -Id id
