@@ -140,4 +140,31 @@ class ProductServiceTest {
         verify(repository, times(1)).existsById(id);
         verify(repository, never()).deleteById(any());
     }
+
+    @Test
+    void saveProduct_WhenPriceIsNegative_ShouldThrowException() {
+        Product p = new Product();
+        p.setId(UUID.randomUUID());
+        p.setName("Test");
+        p.setPrice(-50.0);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.saveProduct(p));
+        assertTrue(ex.getMessage().contains("ERROR"));
+        assertTrue(ex.getMessage().contains("-50.0"));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void updateProduct_WhenPriceIsNegative_ShouldThrowException() {
+        UUID id = UUID.randomUUID();
+        Product details = new Product();
+        details.setName("Teclado");
+        details.setPrice(-10.0);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.updateProduct(id, details));
+        assertTrue(ex.getMessage().contains("ERROR"));
+        assertTrue(ex.getMessage().contains("-10.0"));
+        verify(repository, never()).save(any());
+        verify(repository, never()).findById(any());
+    }
 }
