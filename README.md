@@ -58,6 +58,37 @@ Cada job depende del anterior mediante `needs`. Si algo falla, no se sigue adela
 
 ---
 
+## Capturas de pantalla
+
+### Auto-refresh dashboard
+![Auto-refresh dashboard](docs/assets/auto-refresh-dashboard.png)
+
+### EC2 instancia
+![EC2 instancia](docs/assets/ec2-instance.png)
+
+### ECR imagenes
+![ECR imagenes](docs/assets/ecr-images.png)
+
+### ALB + Target Group healthy
+![ALB + TG healthy](docs/assets/alb-tg-healthy.png)
+
+### Dashboard completo
+![Dashboard completo](docs/assets/dashboard-complete.png)
+
+### Alarmas CloudWatch
+![Alarmas CloudWatch](docs/assets/cloudwatch-alarms.png)
+
+### Logs en CloudWatch
+![Logs CloudWatch](docs/assets/cloudwatch-logs.png)
+
+### GitHub Secrets
+![GitHub Secrets](docs/assets/github-secrets.png)
+
+### curl ALB response
+![curl ALB response](docs/assets/curl-alb-response.png)
+
+---
+
 ## Uso de la API
 
 **Base URL:** `http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products`
