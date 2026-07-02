@@ -176,3 +176,5 @@ Siempre estoy teniendo en criterio de error sobre lo que se esta realizando en e
 
 
 Trigger: deploy with updated AWS credentials v2
+
+Retry: fixed SSH key for EC2 deploy
