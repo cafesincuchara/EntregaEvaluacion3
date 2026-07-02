@@ -2,12 +2,11 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "develop", "main" ]
-
+    branches: [ "develop", "main", "brayan_test" ]
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: productosapi
-  ECR_REGISTRY: 905418035297.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REGISTRY: 767398076646.dkr.ecr.us-east-1.amazonaws.com
 
 jobs:
   validate:
@@ -52,9 +51,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_v2 }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_v2 }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN_v2 }}
           aws-region: ${{ env.AWS_REGION }}
       - name: Login to Amazon ECR
         id: login-ecr
@@ -75,16 +74,16 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_v2 }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_v2 }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN_v2 }}
           aws-region: ${{ env.AWS_REGION }}
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ secrets.EC2_HOST_v2 }}
           username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key: ${{ secrets.EC2_SSH_KEY_v2 }}
           script: |
             aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
               docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
@@ -104,6 +103,6 @@ jobs:
         run: |
           sleep 10
           curl -sf --connect-timeout 10 --max-time 15 \
-            "http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/actuator/health" \
+            "http://${{ secrets.EC2_HOST_v2 }}:8080/actuator/health" \
             && echo "Health check passed" \
             || echo "Health check skipped (network restriction)"
