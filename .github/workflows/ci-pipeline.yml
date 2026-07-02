@@ -3,7 +3,6 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ "develop", "main", "brayan_test" ]
-
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: productosapi
