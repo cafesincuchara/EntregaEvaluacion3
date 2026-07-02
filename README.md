@@ -3,6 +3,7 @@
 **Integrantes:** Brayan Gonzalez, Vicente Herrera  
 **Repositorio:** [EntregaEvaluacion3](https://github.com/cafesincuchara/EntregaEvaluacion3)
 **API en produccion:** [http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products](http://productosapi-alb-1646067421.us-east-1.elb.amazonaws.com/api/v1/products)
+**API Brayan:** [http://107.23.115.153:8080/api/v1/products](http://107.23.115.153:8080/api/v1/products)
 **SonarCloud:** [https://sonarcloud.io/dashboard?id=productosapi](https://sonarcloud.io/dashboard?id=productosapi)
 
 ---
@@ -173,3 +174,7 @@ como manejar esos recursos sin asfixiarse por la reparticion del trafico en el c
 Utilice la IA en gran medida para perfeccionar y automatizar los procesos de creacion de alarmas, grupos, subnets etc,
 Siempre estoy teniendo en criterio de error sobre lo que se esta realizando en el proyecto.
 
+
+Trigger: deploy with updated AWS credentials v2
+
+Retry: fixed SSH key for EC2 deploy

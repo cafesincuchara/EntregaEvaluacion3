@@ -28,8 +28,8 @@ public class ProductService {
 
     @Transactional
     public Product saveProduct(Product product) {
-        if (product.getPrice() != null && product.getPrice() < 0) {
-            throw new RuntimeException("No se admiten valores negativo para el precio");
+        if (product.getPrice() != null && product.getPrice() < 0) { 
+            throw new RuntimeException("Error: valor negativo detectado, solo numeros positivos para productos");
         }
         return repository.save(product);
     }
