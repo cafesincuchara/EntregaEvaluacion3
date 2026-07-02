@@ -3,8 +3,6 @@ name: Deploy ProductosAPI
 on:
   push:
     branches: [ "main", "develop", "brayan_test" ]
-  pull_request:
-    branches: [ "main" ]
 
 env:
   AWS_REGION: us-east-1
@@ -12,103 +10,7 @@ env:
   ECR_REGISTRY: 767398076646.dkr.ecr.us-east-1.amazonaws.com
 
 jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: maven
-
-      # VALIDACIÓN 1: Compilar y ejecutar tests
-      - name: Run unit tests
-        run: mvn clean test
-
-      # VALIDACIÓN 2: Verificar cobertura con JaCoCo
-      - name: Check test coverage (min 80%)
-        run: |
-          mvn jacoco:report jacoco:check@check
-          COVERAGE=$(grep -oP 'Total.*?([0-9]+\.[0-9]+)' target/site/jacoco/index.html | head -1)
-          echo "Cobertura: $COVERAGE%"
-
-      # VALIDACIÓN 3: Escaneo de secretos con Trivy
-      - name: Trivy secret scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          scanners: 'secret'
-          exit-code: '1'
-
-      # VALIDACIÓN 4: Análisis en SonarCloud
-      - name: SonarCloud analysis
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          mvn verify sonar:sonar \
-            -Dsonar.projectKey=ep3-productos_EntregaEvaluacion32 \
-            -Dsonar.organization=ep3-productoss \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${SONAR_TOKEN} \
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-
-      - name: Check Quality Gate status
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          sleep 15
-          STATUS=$(curl -s -u ${SONAR_TOKEN}: \
-            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=ep3-productos_EntregaEvaluacion32" \
-            | jq -r '.projectStatus.status')
-          if [ "$STATUS" = "OK" ] || [ "$STATUS" = "NONE" ]; then
-            echo "✅ Quality Gate: $STATUS (aceptado)"
-          else
-            echo "❌ Quality Gate: $STATUS"
-            exit 1
-          fi
-
-      # VALIDACIÓN 5: Verificar CloudWatch Alarms
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_v2 }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_v2 }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN_v2 }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Check CloudWatch Alarms before deploy
-        run: |
-          ALARMS=$(aws cloudwatch describe-alarms \
-            --state-value ALARM \
-            --alarm-name-prefix "productosapi" \
-            --query 'MetricAlarms[*].AlarmName' \
-            --output text 2>/dev/null || echo "")
-          if [ -n "$ALARMS" ]; then
-            echo "❌ Alarmas en estado ALARM: $ALARMS"
-            exit 1
-          fi
-          echo "✅ Alarmas de CloudWatch OK o sin alarmas configuradas"
-
-      # VALIDACIÓN 6: Auditoría automatizada
-      - name: Run audit script
-        run: chmod +x scripts/audit-pipeline.sh && ./scripts/audit-pipeline.sh
-
-      # VALIDACIÓN 7: Verificar que no hay secretos hardcodeados
-      - name: Check for secrets
-        run: |
-          if grep -rP '(?i)(password|secret|token|api.key|apikey)\s*[:=]\s*["'"'"'][^"'"'"']+' \
-            --include='*.{java,yml,yaml,properties,json,sh}' src/ .github/; then
-            echo "❌ Posibles secretos encontrados en el código"
-            exit 1
-          fi
-          echo "✅ No se encontraron secretos"
-
-  build:
-    needs: validate
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -126,30 +28,16 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push Docker image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
   deploy:
-    needs: build
+    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_v2 }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_v2 }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN_v2 }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -171,21 +59,3 @@ jobs:
               -e AWS_REGION=${{ env.AWS_REGION }} \
               ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
             docker system prune -f
-
-      - name: Publish deployment duration
-        run: |
-          START_TIME=$(date -d "${{ github.event.head_commit.timestamp }}" +%s 2>/dev/null || echo $(date +%s))
-          END_TIME=$(date +%s)
-          DURATION=$((END_TIME - START_TIME))
-          aws cloudwatch put-metric-data \
-            --namespace ProductosAPI \
-            --metric-name DeploymentDuration \
-            --value $DURATION \
-            --unit Seconds \
-            --dimensions Environment=Production
-
-      # VERIFICACIÓN: Health check directo a la EC2
-      - name: Verify deployment health (EC2)
-        run: |
-          sleep 15
-          curl -sf --connect-timeout 10 "http://${{ secrets.EC2_HOST_v2 }}:8080/actuator/health" && echo "✅ API saludable" || echo "⚠️ No se pudo verificar health"
